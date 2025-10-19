@@ -1,0 +1,89 @@
+.container {
+  background: var(--panel);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 20px var(--shadow);
+  backdrop-filter: blur(8px);
+  padding: 1.5rem;
+  color: var(--text);
+  width: 100%;
+  transition: background 0.3s ease, border 0.3s ease;
+
+  h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    &::before {
+      content: '';
+      display: inline-block;
+      width: 6px;
+      height: 18px;
+      background: var(--accent);
+      border-radius: 4px;
+    }
+  }
+}
+
+.chartWrapper {
+  width: 100%;
+  height: 300px;
+  background: var(--card);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 0.5rem 1rem;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 12px rgba(139, 92, 246, 0.25);
+  }
+
+  /* Linha de brilho sutil no topo */
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(139, 92, 246, 0.3),
+      transparent
+    );
+  }
+
+  /* Remove margens de SVG dentro */
+  svg {
+    overflow: visible;
+  }
+}
+
+/* Tooltip customizado do Recharts */
+.recharts-tooltip-wrapper {
+  z-index: 10;
+}
+
+.recharts-default-tooltip {
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  color: var(--text) !important;
+  font-size: 0.85rem !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Barras com leve glow */
+.recharts-bar-rectangle:hover {
+  filter: brightness(1.15) drop-shadow(0 0 6px rgba(139, 92, 246, 0.4));
+  transition: filter 0.2s ease;
+}

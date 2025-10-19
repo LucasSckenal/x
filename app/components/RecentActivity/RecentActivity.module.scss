@@ -1,0 +1,128 @@
+
+.container {
+  background: linear-gradient(rgba(255, 255, 255, .02), rgba(255, 255, 255, .016));;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  h4 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+  }
+}
+
+.viewAllLink {
+  font-size: 13px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: var(--accent);
+  }
+}
+
+.activityList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.activityItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 10px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.iconWrapper {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.iconWrapper.income {
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--positive);
+}
+
+.iconWrapper.expense {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--negative);
+}
+
+.activityDetails {
+  flex: 1;
+  margin-left: 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.description {
+  font-size: 14px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.time {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.amount {
+  font-weight: 600;
+  font-size: 14px;
+}
+.amount {
+  background: rgba(255,255,255,0.02);
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.incomeText {
+  color: var(--positive);
+}
+
+.expenseText {
+  color: var(--negative);
+}
+
+.noActivity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--muted);
+  padding: 40px 0;
+  text-align: center;
+
+  p {
+    font-size: 14px;
+  }
+}

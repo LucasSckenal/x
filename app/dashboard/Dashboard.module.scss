@@ -1,0 +1,108 @@
+/* ================================== */
+/* ESTILOS DA PÁGINA DO DASHBOARD     */
+/* (LAYOUT EM GRID - ESTILO REFINADO) */
+/* ================================== */
+.pageWrap {
+  min-height: 100vh;
+  background: #0f1113;
+  color: var(--text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+
+.container {
+  max-width: 1600px;
+  margin: 20px auto;
+  padding: 0 28px 80px;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  font-size: 18px;
+  color: var(--muted);
+}
+
+/* Cabeçalho da Página */
+.pageHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--muted);
+  text-decoration: none;
+  margin-bottom: 4px;
+  transition: color 0.3s ease;
+  &:hover { color: var(--text); }
+}
+
+.pageTitle {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.actionButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  color: var(--text);
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  &:hover { background: rgba(255, 255, 255, 0.08); }
+  &.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    &:hover { background: var(--accent-600); }
+  }
+}
+
+/* Layout em Grid */
+.dashboardGrid {
+  display: grid;
+  margin-top: 24px;
+  gap: 24px;
+  grid-template-columns: 2fr 1fr;
+  grid-template-areas: "main sidebar";
+}
+
+.gridMain { grid-area: main; display: flex; flex-direction: column; gap: 24px; }
+.gridSidebar { grid-area: sidebar; display: flex; flex-direction: column; gap: 24px; }
+
+/* NOVO: Estilo do Widget/Card para cada componente */
+.widgetCard {
+  background: rgba(20, 22, 25, 0.4);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  padding: 20px 24px;
+  transition: background 0.3s ease;
+  
+  &:hover {
+      background: rgba(24, 26, 30, 0.6);
+  }
+}
+
+/* Responsividade do Grid */
+@media (max-width: 1200px) {
+  .dashboardGrid {
+    grid-template-columns: 1fr;
+    grid-template-areas: "main" "sidebar";
+  }
+}

@@ -1,0 +1,107 @@
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.switchInput {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  
+  &:focus + .slider {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+  }
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: color-mix(in srgb, var(--text) 25%, transparent);
+  transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+  border-radius: 34px;
+
+  &::before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+}
+
+// Estado ativado - transição suave
+.switchInput:checked + .slider {
+  background-color: var(--accent);
+  
+  &::before {
+    transform: translateX(24px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+}
+
+// Hover suave
+.switch:hover {
+  .slider {
+    background-color: color-mix(in srgb, var(--text) 35%, transparent);
+  }
+  
+  .switchInput:checked + .slider {
+    background-color: var(--accent-600);
+  }
+}
+
+// Estados desabilitados
+.switchInput:disabled + .slider {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.switchInput:checked:disabled + .slider {
+  background-color: color-mix(in srgb, var(--accent) 50%, transparent);
+}
+
+// Versão pequena
+.switchSmall {
+  width: 44px;
+  height: 24px;
+
+  .slider::before {
+    height: 16px;
+    width: 16px;
+    left: 4px;
+    bottom: 4px;
+  }
+
+  .switchInput:checked + .slider::before {
+    transform: translateX(20px);
+  }
+}
+
+// Versão grande
+.switchLarge {
+  width: 60px;
+  height: 32px;
+
+  .slider::before {
+    height: 24px;
+    width: 24px;
+    left: 4px;
+    bottom: 4px;
+  }
+
+  .switchInput:checked + .slider::before {
+    transform: translateX(28px);
+  }
+}
