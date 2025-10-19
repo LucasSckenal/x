@@ -1,4 +1,7 @@
-// Investments.module.scss
+/* ==========================================================================
+   Investments.module.scss - Versão Completa e Melhorada
+   ========================================================================== */
+
 .container {
   background: var(--panel);
   border: 1px solid var(--glass-border);
@@ -9,57 +12,132 @@
   color: var(--text);
   width: 100%;
   transition: all 0.3s ease;
-  
+
   &:hover {
     box-shadow: 0 8px 30px var(--shadow);
   }
 }
 
-/* ---------- HEADER ---------- */
+/* Header */
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
 
-  h2 {
-    font-size: 1.3rem;
-    font-weight: 600;
-    background: linear-gradient(135deg, var(--text), var(--accent));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    margin: 0;
-  }
-
-  .addButton {
-    height: 42px;
-    width: 42px;
-    border: none;
-    border-radius: var(--radius);
-    background: linear-gradient(135deg, var(--accent), var(--accent-600));
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
-
-    &:hover {
-      box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
-    }
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 
-/* ---------- RESUMO ---------- */
-.summary {
-  background: linear-gradient(135deg, var(--card), var(--panel-strong));
+.headerTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.headerIcon {
+  color: var(--accent);
+  background: linear-gradient(135deg, var(--accent), var(--accent-600));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.headerSubtitle {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 0.2rem 0 0 0;
+  opacity: 0.8;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+
+  @media (max-width: 480px) {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+.refreshButton {
+  background: var(--panel-strong);
   border: 1px solid var(--glass-border);
+  color: var(--muted);
   border-radius: var(--radius);
+  padding: 0.75rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover:not(:disabled) {
+    background: var(--panel);
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.refreshing {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.addButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, var(--accent), var(--accent-600));
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.75rem 1.25rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+  font-size: 0.9rem;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
+  }
+
+  @media (max-width: 480px) {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+/* Grid de Estatísticas */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.statCard {
+  background: var(--card);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
   padding: 1.5rem;
-  margin-bottom: 1.5rem;
-  text-align: center;
+  transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
 
@@ -69,26 +147,64 @@
     top: 0;
     left: 0;
     right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
   }
 
-  p {
-    color: var(--muted);
-    font-size: 0.9rem;
-    margin: 0;
-  }
-
-  h3 {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: var(--accent);
-    margin: 0.5rem 0 1rem;
-    text-shadow: 0 2px 10px rgba(139, 92, 246, 0.2);
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px var(--shadow);
   }
 }
 
-/* ---------- LISTA ---------- */
+.statCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.statCardTitle {
+  font-size: 0.9rem;
+  color: var(--muted);
+  font-weight: 500;
+  flex: 1;
+}
+
+.trendIndicator {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 1rem;
+  
+  &.positive {
+    background: rgba(22, 163, 74, 0.1);
+    color: #16a34a;
+  }
+  
+  &.negative {
+    background: rgba(220, 38, 38, 0.1);
+    color: #dc2626;
+  }
+}
+
+.statCardValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+  line-height: 1.2;
+}
+
+.statCardSubtitle {
+  font-size: 0.85rem;
+  color: var(--muted);
+  opacity: 0.8;
+}
+
+/* Lista de Investimentos */
 .investmentList {
   display: flex;
   flex-direction: column;
@@ -103,7 +219,7 @@
   border-radius: var(--radius);
   padding: 1rem 1.2rem;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
   position: relative;
   overflow: hidden;
   cursor: pointer;
@@ -135,35 +251,6 @@
   background: var(--panel);
   flex-shrink: 0;
   transition: all 0.3s ease;
-
-  &[data-type='Renda'] { 
-    background: linear-gradient(135deg, #34d39920, #34d39910);
-    color: #34d399; 
-  }
-  &[data-type='Ações'] { 
-    background: linear-gradient(135deg, #60a5fa20, #60a5fa10);
-    color: #60a5fa; 
-  }
-  &[data-type='Fundo'] { 
-    background: linear-gradient(135deg, #fbbf2420, #fbbf2410);
-    color: #fbbf24; 
-  }
-  &[data-type='ETF'] { 
-    background: linear-gradient(135deg, #a78bfa20, #a78bfa10);
-    color: #a78bfa; 
-  }
-  &[data-type='Cripto'] { 
-    background: linear-gradient(135deg, #f8717120, #f8717110);
-    color: #f87171; 
-  }
-  &[data-type='Outro'] { 
-    background: linear-gradient(135deg, var(--muted-20), var(--muted-10));
-    color: var(--muted); 
-  }
-
-  .typeIcon {
-    font-size: 1.2rem;
-  }
 }
 
 .itemInfo {
@@ -176,720 +263,140 @@
     margin: 0 0 0.2rem;
     color: var(--text);
   }
+}
 
-  p {
-    color: var(--muted);
-    font-size: 0.85rem;
-    margin: 0;
-    opacity: 0.8;
-  }
+.itemMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
 
-  .symbol {
-    font-size: 0.75rem;
-    color: var(--muted);
-    background: var(--panel-strong);
-    padding: 0.1rem 0.4rem;
-    border-radius: 0.2rem;
-    margin-top: 0.2rem;
-    display: inline-block;
-  }
+.typeBadge {
+  background: var(--panel-strong);
+  color: var(--muted);
+  padding: 0.2rem 0.6rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border: 1px solid var(--glass-border);
+}
+
+.symbolBadge {
+  background: linear-gradient(135deg, var(--accent), var(--accent-600));
+  color: white;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 600;
 }
 
 .itemValue {
   display: flex;
   align-items: flex-start;
   gap: 0.8rem;
-
-  .valueData {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.4rem;
-  }
-
-  .value {
-    font-weight: 700;
-    color: var(--text);
-    font-size: 1rem;
-    line-height: 1.2;
-  }
-
-  .priceInfo {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.2rem;
-  }
-
-  .priceLabel {
-    font-size: 0.75rem;
-    color: var(--muted);
-    line-height: 1.2;
-  }
-
-  .priceChange {
-    font-size: 0.7rem;
-    font-weight: 600;
-    padding: 0.15rem 0.4rem;
-    border-radius: 0.25rem;
-    line-height: 1.2;
-  }
-
-  .deleteButton {
-    background: transparent;
-    border: none;
-    color: var(--muted);
-    cursor: pointer;
-    padding: 6px;
-    border-radius: 6px;
-    transition: all 0.2s ease;
-    margin-top: 0.2rem;
-
-    &:hover {
-      color: var(--negative);
-      background: rgba(239, 68, 68, 0.1);
-    }
-  }
 }
 
-.centeredMessage {
-  text-align: center;
-  color: var(--muted);
-  padding: 3rem 1rem;
-  font-size: 0.95rem;
-  line-height: 1.6;
-
-  span {
-    opacity: 0.7;
-    font-size: 0.85rem;
-  }
-}
-
-/* ---------- MODAIS COM LARGURAS DIFERENTES ---------- */
-.modalSmall {
-  max-width: 480px !important;
-}
-
-.modalMedium {
-  max-width: 600px !important;
-}
-
-.modalLarge {
-  max-width: 800px !important;
-}
-
-.modalXLarge {
-  max-width: 1100px !important;
-  width: 95% !important;
-  
-  @media (max-width: 1200px) {
-    max-width: 1000px !important;
-    width: 98% !important;
-    margin: 1rem;
-  }
-  
-  @media (max-width: 768px) {
-    max-width: 95% !important;
-    width: 95% !important;
-    margin: 0.5rem;
-  }
-}
-
-/* ---------- MODAL DE DETALHES ---------- */
-.detailsContent {
+.valueData {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
-}
-
-.detailsHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 1rem 0;
-  border-bottom: 1px solid var(--glass-border);
-
-  .investmentType {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .typeBadge {
-    background: linear-gradient(135deg, var(--accent), var(--accent-600));
-    color: white;
-    padding: 0.4rem 0.8rem;
-    border-radius: 1rem;
-    font-size: 0.8rem;
-    font-weight: 600;
-    display: inline-block;
-  }
-
-  .symbolBadge {
-    background: var(--panel-strong);
-    color: var(--muted);
-    padding: 0.3rem 0.6rem;
-    border-radius: 0.5rem;
-    font-size: 0.75rem;
-    border: 1px solid var(--glass-border);
-  }
-
-  .investmentStats {
-    display: flex;
-    gap: 1.5rem;
-  }
-
-  .stat {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 0.3rem;
-
-    svg {
-      color: var(--accent);
-    }
-
-    span {
-      font-size: 0.8rem;
-      color: var(--muted);
-    }
-
-    strong {
-      font-size: 0.9rem;
-      font-weight: 700;
-    }
-  }
-}
-
-// Tabs de Navegação
-.tabs {
-  display: flex;
-  background: var(--panel-strong);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius);
-  padding: 0.25rem;
-  gap: 0.25rem;
-}
-
-.tab {
-  flex: 1;
-  padding: 0.75rem 1rem;
-  border: none;
-  background: transparent;
-  color: var(--muted);
-  border-radius: calc(var(--radius) - 2px);
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 0.85rem;
-  font-weight: 500;
-
-  &:hover {
-    background: var(--panel);
-    color: var(--text);
-  }
-
-  &.activeTab {
-    background: var(--accent);
-    color: white;
-    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
-  }
-}
-
-// Gráfico de Linha
-.performanceChart {
-  background: var(--card);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
-
-  h4 {
-    margin: 0 0 0.5rem 0;
-    font-size: 1.1rem;
-    color: var(--text);
-  }
-}
-
-.chartHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-.chartControls {
-  display: flex;
-  gap: 0.5rem;
-  background: var(--panel-strong);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius);
-  padding: 0.25rem;
-}
-
-.chartTypeButton {
-  padding: 0.5rem 1rem;
-  border: none;
-  background: transparent;
-  color: var(--muted);
-  border-radius: calc(var(--radius) - 2px);
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 0.8rem;
-  font-weight: 500;
-
-  &:hover {
-    background: var(--panel);
-    color: var(--text);
-  }
-
-  &.activeChartType {
-    background: var(--accent);
-    color: white;
-    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
-  }
-}
-
-.lineChartContainer {
-  position: relative;
-  height: 400px;
-  background: var(--panel-strong);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius);
-  padding: 1rem;
-}
-
-.lineChart {
-  position: relative;
-  height: 100%;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.yAxis {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 80px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 1rem 0.5rem;
-  z-index: 2;
-}
-
-.yTick {
-  position: absolute;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  
-  .yLabel {
-    font-size: 0.7rem;
-    color: var(--muted);
-    background: var(--panel-strong);
-    padding: 0.2rem 0.4rem;
-    border-radius: 0.2rem;
-    z-index: 2;
-  }
-  
-  .gridLine {
-    flex: 1;
-    height: 1px;
-    background: var(--glass-border);
-    margin-left: 0.5rem;
-    opacity: 0.3;
-  }
-}
-
-.chartSvgContainer {
-  flex: 1;
-  position: relative;
-  margin-left: 80px;
-  margin-bottom: 40px;
-}
-
-.lineSvg {
-  width: 100%;
-  height: 100%;
-}
-
-.xAxis {
-  position: relative;
-  height: 40px;
-  margin-left: 80px;
-  display: flex;
-  justify-content: space-between;
-  padding: 0.5rem 0;
-}
-
-.xTick {
-  position: absolute;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  transform: translateX(-50%);
-  
-  .xLabel {
-    font-size: 0.75rem;
-    color: var(--muted);
-    margin-bottom: 0.5rem;
-    white-space: nowrap;
-  }
-  
-  .xMarker {
-    width: 2px;
-    height: 6px;
-    border-radius: 1px;
-    transition: all 0.3s ease;
-  }
-}
-
-.dataPoint {
-  cursor: pointer;
-  transition: all 0.3s ease;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
-  
-  &:hover {
-    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
-  }
-}
-
-.lineTooltip {
-  position: absolute;
-  top: -120px;
-  z-index: 100;
-  pointer-events: none;
-  transform: translateX(-50%);
-  
-  .tooltipArrow {
-    width: 0;
-    height: 0;
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-    border-top: 8px solid var(--panel);
-    position: absolute;
-    bottom: -8px;
-    left: 50%;
-    transform: translateX(-50%);
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
-  }
-  
-  .tooltipContent {
-    background: var(--panel);
-    border: 1px solid var(--glass-border);
-    border-radius: var(--radius-lg);
-    padding: 1rem;
-    box-shadow: 
-      0 10px 25px var(--shadow),
-      0 0 0 1px rgba(255, 255, 255, 0.1) inset;
-    backdrop-filter: blur(20px);
-    min-width: 160px;
-    
-    .tooltipHeader {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 0.75rem;
-      padding-bottom: 0.5rem;
-      border-bottom: 1px solid var(--glass-border);
-      
-      strong {
-        font-size: 0.9rem;
-        color: var(--text);
-      }
-      
-      .tooltipReturn {
-        font-size: 0.8rem;
-        font-weight: 700;
-        padding: 0.2rem 0.5rem;
-        border-radius: 0.5rem;
-        background: rgba(22, 163, 74, 0.1);
-      }
-    }
-    
-    .tooltipBody {
-      .tooltipRow {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 0.5rem;
-        
-        &:last-child {
-          margin-bottom: 0;
-        }
-        
-        span {
-          font-size: 0.8rem;
-          color: var(--muted);
-        }
-        
-        strong {
-          font-size: 0.85rem;
-          color: var(--text);
-        }
-      }
-    }
-  }
-}
-
-.chartLegend {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 1.5rem;
-  padding: 1rem;
-  background: var(--panel-strong);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius);
-  
-  .legendItem {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    
-    .legendColor {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-    }
-    
-    .legendLine {
-      width: 20px;
-      height: 2px;
-      background: var(--muted);
-      border-radius: 1px;
-    }
-    
-    span {
-      font-size: 0.8rem;
-      color: var(--muted);
-    }
-  }
-  
-  .performanceIndicator {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    
-    span {
-      font-size: 0.8rem;
-      color: var(--muted);
-    }
-    
-    strong {
-      font-size: 0.9rem;
-      font-weight: 700;
-      padding: 0.3rem 0.6rem;
-      border-radius: 0.5rem;
-      background: rgba(22, 163, 74, 0.1);
-    }
-  }
-}
-
-// Tabela de Performance
-.performanceTable {
-  h4 {
-    margin: 0 0 1rem 0;
-    font-size: 1.1rem;
-    color: var(--text);
-  }
-}
-
-.tableContainer {
-  background: var(--card);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  th {
-    background: var(--panel-strong);
-    padding: 1rem;
-    text-align: left;
-    font-weight: 600;
-    color: var(--text);
-    font-size: 0.85rem;
-    border-bottom: 1px solid var(--glass-border);
-  }
-
-  td {
-    padding: 1rem;
-    border-bottom: 1px solid var(--glass-border);
-    font-size: 0.85rem;
-  }
-
-  tr:last-child td {
-    border-bottom: none;
-  }
-
-  tr:hover {
-    background: var(--panel-strong);
-  }
-}
-
-.monthBadge {
-  background: var(--panel);
-  padding: 0.3rem 0.6rem;
-  border-radius: 0.5rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  border: 1px solid var(--glass-border);
-}
-
-.returnCell {
-  display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 0.3rem;
+}
+
+.value {
+  font-weight: 700;
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.performanceBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: rgba(22, 163, 74, 0.1);
+  color: #16a34a;
+  padding: 0.2rem 0.5rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
   font-weight: 600;
 }
 
-// Análise
-.analysisTab {
-  h4 {
-    margin: 0 0 1.5rem 0;
-    font-size: 1.1rem;
-    color: var(--text);
+.deleteButton {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  margin-top: 0.2rem;
+
+  &:hover {
+    color: var(--negative);
+    background: rgba(239, 68, 68, 0.1);
   }
 }
 
-.analysisGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
-
-.analysisCard {
-  background: var(--card);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
-
-  h5 {
-    margin: 0 0 1rem 0;
-    font-size: 0.9rem;
-    color: var(--text);
-    font-weight: 600;
-  }
-}
-
-.statsList {
-  display: flex;
-  flex-direction: column;
-  gap: 0.8rem;
-}
-
-.statItem {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-bottom: 0.8rem;
-  border-bottom: 1px solid var(--glass-border);
-
-  &:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
-  }
-
-  span {
-    font-size: 0.85rem;
-    color: var(--muted);
-  }
-
-  strong {
-    font-size: 0.9rem;
-    font-weight: 700;
-  }
-}
-
-.bestWorstMonth {
+/* Estados vazios melhorados */
+.emptyState {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
   text-align: center;
-  gap: 0.5rem;
-
-  .monthName {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--text);
-  }
-
-  strong {
-    font-size: 1.1rem;
-    font-weight: 700;
-  }
-
-  .monthValue {
-    font-size: 0.8rem;
-    color: var(--muted);
-  }
-}
-
-.volatilityInfo {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-
-  span {
-    font-size: 0.85rem;
-    color: var(--muted);
-  }
-
-  strong {
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--text);
-  }
-}
-
-// Resumo Final
-.performanceSummary {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 1rem;
-}
-
-.summaryCard {
   background: var(--card);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
-  padding: 1.5rem;
-  text-align: center;
-
-  h5 {
-    margin: 0 0 0.5rem 0;
-    font-size: 0.9rem;
+  
+  h3 {
+    margin: 1rem 0 0.5rem 0;
+    color: var(--text);
+    font-size: 1.2rem;
+  }
+  
+  p {
     color: var(--muted);
-    font-weight: 500;
-  }
-
-  .currentValue {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: var(--accent);
-  }
-
-  .trendIndicator {
-    font-size: 1rem;
-    font-weight: 600;
-  }
-
-  .performanceRating {
+    margin-bottom: 1.5rem;
     font-size: 0.9rem;
-    font-weight: 600;
-    padding: 0.4rem 0.8rem;
-    border-radius: 1rem;
-    display: inline-block;
+  }
+  
+  .addButton {
+    margin-top: 0.5rem;
   }
 }
 
-// Disclaimer
+.emptyIcon {
+  opacity: 0.5;
+  margin-bottom: 1rem;
+}
+
+/* Loading states */
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  color: var(--muted);
+  
+  p {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+  }
+}
+
+.loadingSpinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--glass-border);
+  border-top: 3px solid var(--accent);
+  border-radius: 50%;
+}
+
+/* Disclaimer */
 .disclaimer {
   display: flex;
   align-items: center;
@@ -900,6 +407,7 @@
   border-radius: var(--radius);
   font-size: 0.8rem;
   color: var(--muted);
+  margin-top: 1.5rem;
 
   svg {
     color: #f59e0b;
@@ -907,123 +415,9 @@
   }
 }
 
-// Estados de Loading e Vazio
-.loadingState {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--muted);
-  
-  .loadingSpinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid var(--glass-border);
-    border-top: 3px solid var(--accent);
-    border-radius: 50%;
-    margin-bottom: 1rem;
-  }
-  
-  p {
-    margin: 0;
-    font-size: 0.9rem;
-  }
-}
-
-.emptyState {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--muted);
-  text-align: center;
-  
-  .emptyIcon {
-    margin-bottom: 1rem;
-    opacity: 0.5;
-  }
-  
-  p {
-    margin: 0 0 0.5rem 0;
-    font-weight: 500;
-    font-size: 0.9rem;
-  }
-  
-  span {
-    font-size: 0.8rem;
-    opacity: 0.7;
-  }
-}
-
-// Responsividade
-@media (max-width: 768px) {
-  .detailsHeader {
-    flex-direction: column;
-    gap: 1rem;
-
-    .investmentStats {
-      width: 100%;
-      justify-content: space-between;
-    }
-  }
-
-  .tabs {
-    flex-direction: column;
-  }
-
-  .analysisGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .performanceSummary {
-    grid-template-columns: 1fr;
-  }
-
-  .tableContainer {
-    overflow-x: auto;
-    
-    table {
-      min-width: 500px;
-    }
-  }
-
-  .lineChartContainer {
-    height: 300px;
-  }
-
-  .chartHeader {
-    flex-direction: column;
-    gap: 1rem;
-    align-items: flex-start;
-  }
-  
-  .chartControls {
-    width: 100%;
-    justify-content: center;
-  }
-  
-  .chartLegend {
-    flex-direction: column;
-    gap: 1rem;
-    align-items: flex-start;
-  }
-  
-  .yAxis {
-    width: 60px;
-  }
-  
-  .chartSvgContainer {
-    margin-left: 60px;
-  }
-  
-  .xAxis {
-    margin-left: 60px;
-  }
-}
-
-/* ---------- MODAIS GERAIS ---------- */
+/* ==========================================================================
+   Estilos para Modais
+   ========================================================================== */
 .modalBackdrop {
   position: fixed;
   inset: 0;
@@ -1039,16 +433,16 @@
   background: linear-gradient(135deg, var(--card) 100%, var(--panel-strong) 0%);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
-  box-shadow: 
-    0 20px 40px var(--shadow),
+  box-shadow: 0 20px 40px var(--shadow),
     0 0 0 1px rgba(255, 255, 255, 0.1) inset;
   padding: 2rem;
   width: 100%;
+  height: 99vh;
   color: var(--text);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   position: relative;
-  
+
   &::before {
     content: '';
     position: absolute;
@@ -1140,8 +534,7 @@
     &:focus {
       border-color: var(--accent);
       background: var(--panel);
-      box-shadow: 
-        0 0 0 4px rgba(139, 92, 246, 0.15),
+      box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15),
         0 4px 20px rgba(139, 92, 246, 0.2);
       transform: translateY(-1px);
     }
@@ -1200,16 +593,15 @@
       left: -100%;
       width: 100%;
       height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
       transition: left 0.5s;
     }
 
     &:hover {
       transform: translateY(-2px);
-      box-shadow: 
-        0 8px 25px rgba(139, 92, 246, 0.4),
+      box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4),
         0 0 0 1px rgba(255, 255, 255, 0.1) inset;
-      
+
       &::before {
         left: 100%;
       }
@@ -1253,109 +645,668 @@
   }
 }
 
-// Estilos para o CustomNumberInput dentro do modal
-.number-input-wrapper {
-  position: relative;
+/* Detalhes do Investimento */
+.detailsContent {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 1.5rem;
+}
 
-  .number-input {
-    background: var(--panel-strong);
-    border: 1.5px solid var(--glass-border);
-    border-radius: var(--radius);
-    color: var(--text);
-    font-size: 0.95rem;
-    padding: 0.75rem 3rem 0.75rem 1rem;
-    height: 48px;
-    outline: none;
-    transition: all 0.3s ease;
-    backdrop-filter: blur(10px);
-    width: 100%;
-    appearance: textfield;
+.detailsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--glass-border);
 
-    &::-webkit-outer-spin-button,
-    &::-webkit-inner-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-    }
-
-    &:focus {
-      border-color: var(--accent);
-      background: var(--panel);
-      box-shadow: 
-        0 0 0 4px rgba(139, 92, 246, 0.15),
-        0 4px 20px rgba(139, 92, 246, 0.2);
-      transform: translateY(-1px);
-    }
-
-    &::placeholder {
-      color: var(--muted);
-      opacity: 0.6;
-    }
-  }
-
-  .number-controls {
-    position: absolute;
-    right: 4px;
-    top: 50%;
-    transform: translateY(-50%);
+  .investmentType {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 0.5rem;
   }
 
-  .number-btn {
-    width: 20px;
-    height: 16px;
-    background: var(--panel);
-    border: 1px solid var(--glass-border);
-    color: var(--text);
-    cursor: pointer;
+  .investmentStats {
     display: flex;
+    gap: 1.5rem;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    font-size: 10px;
-    transition: all 0.2s ease;
-    position: relative;
+    text-align: center;
+    gap: 0.3rem;
 
-    &.increment::after {
-      content: '▲';
-      font-size: 8px;
+    svg {
+      color: var(--accent);
     }
 
-    &.decrement::after {
-      content: '▼';
-      font-size: 8px;
+    span {
+      font-size: 0.8rem;
+      color: var(--muted);
     }
 
-    &:hover {
-      background: var(--accent);
-      color: white;
-      border-color: var(--accent);
+    strong {
+      font-size: 0.9rem;
+      font-weight: 700;
     }
+  }
 
-    &:active {
-      transform: scale(0.95);
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 1rem;
+
+    .investmentStats {
+      width: 100%;
+      justify-content: space-between;
     }
   }
 }
 
-// Animações especiais
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-5px); }
+/* Tamanhos de Modal */
+.modalSmall {
+  max-width: 480px !important;
 }
 
-.floating {
-  animation: float 3s ease-in-out infinite;
+.modalMedium {
+  max-width: 600px !important;
 }
 
-.pulse {
-  animation: pulse 2s infinite;
+.modalLarge {
+  max-width: 800px !important;
+  width: 95% !important;
+
+  @media (max-width: 768px) {
+    max-width: 95% !important;
+    width: 95% !important;
+    margin: 0.5rem;
+  }
 }
 
-@keyframes pulse {
-  0% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.05); opacity: 0.8; }
-  100% { transform: scale(1); opacity: 1; }
+/* ==========================================================================
+   Modal de Detalhes do Investimento
+   ========================================================================== */
+
+.detailsContent {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.detailsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--glass-border);
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 1rem;
+  }
+}
+
+.investmentType {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.investmentStats {
+  display: flex;
+  gap: 1.5rem;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+}
+
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+
+  svg {
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+
+  span {
+    color: var(--muted);
+    margin-right: 0.5rem;
+  }
+
+  strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+}
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--glass-border);
+  padding-bottom: 0.5rem;
+
+  @media (max-width: 480px) {
+    flex-wrap: wrap;
+  }
+}
+
+.tab {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius) var(--radius) 0 0;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  font-weight: 500;
+
+  &:hover {
+    background: var(--panel-strong);
+    color: var(--text);
+  }
+
+  &.activeTab {
+    background: var(--panel-strong);
+    color: var(--accent);
+    border-bottom: 2px solid var(--accent);
+  }
+
+  @media (max-width: 480px) {
+    flex: 1;
+    min-width: 120px;
+    text-align: center;
+    padding: 0.75rem 1rem;
+  }
+}
+
+.performanceChart {
+  background: var(--card);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.chartHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+
+  h4 {
+    margin: 0;
+    color: var(--text);
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+}
+
+.chartControls {
+  display: flex;
+  gap: 0.5rem;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+.chartTypeButton {
+  background: var(--panel-strong);
+  border: 1px solid var(--glass-border);
+  color: var(--muted);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.8rem;
+
+  &:hover {
+    background: var(--panel);
+    color: var(--text);
+  }
+
+  &.activeChartType {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+}
+
+.lineChartContainer {
+  position: relative;
+  height: 300px;
+  margin-bottom: 1rem;
+
+  @media (max-width: 480px) {
+    height: 250px;
+  }
+}
+
+.lineChart {
+  display: flex;
+  height: 100%;
+  position: relative;
+}
+
+.yAxis {
+  position: relative;
+  width: 80px;
+  margin-right: 1rem;
+  flex-shrink: 0;
+
+  @media (max-width: 480px) {
+    width: 60px;
+  }
+}
+
+.yTick {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.yLabel {
+  font-size: 0.7rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.gridLine {
+  flex: 1;
+  height: 1px;
+  background: var(--glass-border);
+  opacity: 0.5;
+}
+
+.chartSvgContainer {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.lineSvg {
+  width: 100%;
+  height: 100%;
+}
+
+.dataPoint {
+  cursor: pointer;
+}
+
+.lineTooltip {
+  position: absolute;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.tooltipArrow {
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid var(--panel-strong);
+}
+
+.tooltipContent {
+  background: var(--panel-strong);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+  box-shadow: 0 8px 25px var(--shadow);
+  backdrop-filter: blur(10px);
+  min-width: 160px;
+
+  @media (max-width: 480px) {
+    min-width: 140px;
+    padding: 0.5rem;
+  }
+}
+
+.tooltipHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+
+  strong {
+    font-size: 0.9rem;
+    color: var(--text);
+  }
+}
+
+.tooltipReturn {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.tooltipBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.tooltipRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+
+  span {
+    color: var(--muted);
+  }
+
+  strong {
+    color: var(--text);
+  }
+}
+
+.xAxis {
+  position: relative;
+  height: 40px;
+  margin-top: 0.5rem;
+}
+
+.xTick {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.xLabel {
+  font-size: 0.7rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.xMarker {
+  width: 2px;
+  height: 6px;
+  background: var(--muted);
+  border-radius: 1px;
+  transition: all 0.3s ease;
+}
+
+.chartLegend {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--glass-border);
+  flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.legendColor {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.legendLine {
+  width: 20px;
+  height: 2px;
+  background: var(--muted);
+  border-radius: 1px;
+}
+
+.performanceIndicator {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: var(--muted);
+
+  strong {
+    margin-left: 0.25rem;
+  }
+
+  @media (max-width: 768px) {
+    margin-left: 0;
+  }
+}
+
+.performanceTable {
+  background: var(--card);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+
+  h4 {
+    margin: 0 0 1rem 0;
+    color: var(--text);
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+}
+
+.tableContainer {
+  overflow-x: auto;
+}
+
+/* CORREÇÃO: Removido seletor global 'table' e substituído por classe */
+.performanceTableTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.performanceTableHead {
+  background: var(--panel-strong);
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.performanceTableCell {
+  padding: 1rem;
+  border-bottom: 1px solid var(--glass-border);
+  font-size: 0.9rem;
+}
+
+.performanceTableRow:last-child .performanceTableCell {
+  border-bottom: none;
+}
+
+.monthBadge {
+  background: var(--panel-strong);
+  color: var(--muted);
+  padding: 0.3rem 0.6rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.returnCell {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.analysisTab {
+  background: var(--card);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+
+  h4 {
+    margin: 0 0 1.5rem 0;
+    color: var(--text);
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+}
+
+.analysisGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.analysisCard {
+  background: var(--panel-strong);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+
+  h5 {
+    margin: 0 0 1rem 0;
+    color: var(--text);
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+}
+
+.statsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.statItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+
+  span {
+    color: var(--muted);
+  }
+
+  strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+}
+
+.bestWorstMonth {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  text-align: center;
+}
+
+.monthName {
+  font-size: 0.9rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.monthValue {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.volatilityInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  span {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  strong {
+    font-size: 0.9rem;
+    color: var(--text);
+    margin-bottom: 0.25rem;
+  }
+}
+
+.performanceSummary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.summaryCard {
+  background: var(--card);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  text-align: center;
+
+  h5 {
+    margin: 0 0 1rem 0;
+    color: var(--muted);
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+}
+
+.currentValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+  display: block;
+}
+
+.trendIndicator {
+  font-size: 1.1rem;
+  font-weight: 600;
+  display: block;
+}
+
+.performanceRating {
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: 2rem;
+  display: inline-block;
 }

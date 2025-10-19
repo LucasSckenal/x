@@ -22,12 +22,12 @@
     0 0 0 1px rgba(255, 255, 255, 0.1) inset;
   padding: 2rem;
   width: 100%;
-  max-width: 480px;
+  max-width: 800px !important;
   color: var(--text);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   position: relative;
-  max-height: 90vh;
+  max-height: 99vh;
   overflow-y: auto;
   
   &::before {

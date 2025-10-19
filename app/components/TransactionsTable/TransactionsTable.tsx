@@ -14,12 +14,12 @@ export interface Transaction {
   type: 'income' | 'expense';
   category: string;
   categoryIcon: string;
-  date: any; // Pode ser string ou Firestore Timestamp
+  date: string;
   recurring?: boolean;
-  nextDueDate?: any;
+  nextDueDate?: string;
 }
 
-// Categorias de transação
+// Exportar as categorias de transação
 export const transactionCategories = [
   { value: 'Alimentação', label: 'Alimentação', icon: '🍕' },
   { value: 'Transporte', label: 'Transporte', icon: '🚗' },
@@ -65,46 +65,88 @@ interface FormData {
   nextDueDate?: string;
 }
 
-// Função para garantir que o valor seja Date ou ISO string
-const fixDateIssue = (date: string | any): string => {
-  if (!date) return new Date().toISOString().split('T')[0];
-
-  let dateObj: Date;
-
-  if (date.toDate) dateObj = date.toDate(); // Firestore Timestamp
-  else if (typeof date === 'string') dateObj = new Date(date);
-  else if (date instanceof Date) dateObj = date;
-  else dateObj = new Date();
-
+// Função para corrigir o problema da data 01/01/2000
+const fixDateIssue = (dateString: string): string => {
+  if (!dateString) return new Date().toISOString().split('T')[0];
+  
+  // Se a data for 01/01/2000, substituir pela data atual
+  const date = new Date(dateString);
   const problematicDate = new Date('2000-01-01');
-  if (dateObj.getTime() === problematicDate.getTime()) {
+  
+  if (date.getTime() === problematicDate.getTime()) {
     return new Date().toISOString().split('T')[0];
   }
-
-  return dateObj.toISOString().split('T')[0];
+  
+  return dateString;
 };
 
-// Formatar para exibição
-const formatDateForDisplay = (date: string | any): string => {
-  if (!date) return '';
-  let dateObj: Date;
-
-  if (date.toDate) dateObj = date.toDate();
-  else if (typeof date === 'string') dateObj = new Date(date);
-  else if (date instanceof Date) dateObj = date;
-  else return '';
-
-  if (isNaN(dateObj.getTime())) return '';
-  return dateObj.toLocaleDateString('pt-BR');
+// Função para formatar a data para o input type="date"
+const formatDateForInput = (dateString: string): string => {
+  const fixedDate = fixDateIssue(dateString);
+  
+  try {
+    const date = new Date(fixedDate);
+    if (isNaN(date.getTime())) {
+      return new Date().toISOString().split('T')[0];
+    }
+    return date.toISOString().split('T')[0];
+  } catch {
+    return new Date().toISOString().split('T')[0];
+  }
 };
 
-// Pegar ícone da categoria
-const getCategoryIcon = (category: string) => {
-  const found = transactionCategories.find(c => c.value === category);
-  return found?.icon || '💰';
+// Função para formatar a data para exibição
+const formatDateForDisplay = (dateString: string): string => {
+  if (!dateString) return '';
+  
+  try {
+    // Tenta reconhecer formato do Firebase
+    const parts = dateString.match(/(\d+) de (\w+) de (\d{4})/);
+    if (parts) {
+      const day = parseInt(parts[1], 10);
+      const monthStr = parts[2].toLowerCase();
+      const year = parseInt(parts[3], 10);
+
+      const monthsMap: { [key: string]: number } = {
+        janeiro: 0,
+        fevereiro: 1,
+        março: 2,
+        abril: 3,
+        maio: 4,
+        junho: 5,
+        julho: 6,
+        agosto: 7,
+        setembro: 8,
+        outubro: 9,
+        novembro: 10,
+        dezembro: 11
+      };
+
+      const month = monthsMap[monthStr];
+      if (month !== undefined) {
+        const date = new Date(year, month, day);
+        return date.toLocaleDateString('pt-BR');
+      }
+    }
+
+    // fallback para ISO ou outros formatos
+    const date = new Date(dateString);
+    if (!isNaN(date.getTime())) {
+      return date.toLocaleDateString('pt-BR');
+    }
+
+    return '';
+  } catch {
+    return '';
+  }
 };
 
-export default function TransactionsTable({ transactions, onAddTransaction, onEditTransaction, onDeleteTransaction }: TransactionsTableProps) {
+export default function TransactionsTable({ 
+  transactions, 
+  onAddTransaction, 
+  onEditTransaction, 
+  onDeleteTransaction 
+}: TransactionsTableProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
@@ -115,13 +157,14 @@ export default function TransactionsTable({ transactions, onAddTransaction, onEd
   const [monthFilter, setMonthFilter] = useState<string>('all');
   const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
 
+  // Dados do formulário
   const [formData, setFormData] = useState<FormData>({
     description: '',
     amount: '',
     type: 'expense',
     category: '',
     categoryIcon: '💰',
-    date: new Date().toISOString().split('T')[0],
+    date: formatDateForInput(new Date().toISOString()),
     recurring: false,
     frequency: 'monthly',
     endDate: '',
@@ -146,49 +189,72 @@ export default function TransactionsTable({ transactions, onAddTransaction, onEd
 
   // Filtragem e ordenação
   const filteredAndSortedTransactions = useMemo(() => {
-    let filtered = transactions.filter(t => {
-      if (filter !== 'all' && t.type !== filter) return false;
-      if (searchTerm && !t.description.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-      if (monthFilter !== 'all') {
-        const month = new Date(fixDateIssue(t.date)).getMonth().toString();
-        if (month !== monthFilter) return false;
+    let filtered = transactions.filter(transaction => {
+      // Filtro por tipo
+      if (filter !== 'all' && transaction.type !== filter) return false;
+      
+      // Filtro por busca
+      if (searchTerm && !transaction.description.toLowerCase().includes(searchTerm.toLowerCase())) {
+        return false;
       }
+      
+      // Filtro por mês
+      if (monthFilter !== 'all') {
+        const transactionMonth = new Date(transaction.date).getMonth().toString();
+        if (transactionMonth !== monthFilter) return false;
+      }
+      
       return true;
     });
 
+    // Ordenação
     filtered.sort((a, b) => {
-      let aVal: any, bVal: any;
+      let aValue, bValue;
+      
       switch (sortField) {
         case 'date':
-          aVal = new Date(fixDateIssue(a.date)).getTime();
-          bVal = new Date(fixDateIssue(b.date)).getTime();
+          aValue = new Date(a.date).getTime();
+          bValue = new Date(b.date).getTime();
           break;
         case 'amount':
-          aVal = a.amount;
-          bVal = b.amount;
+          aValue = a.amount;
+          bValue = b.amount;
           break;
         case 'description':
-          aVal = a.description.toLowerCase();
-          bVal = b.description.toLowerCase();
+          aValue = a.description.toLowerCase();
+          bValue = b.description.toLowerCase();
           break;
         default:
           return 0;
       }
-      return sortDirection === 'asc' ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1);
+      
+      if (sortDirection === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
     });
 
     return filtered;
   }, [transactions, filter, searchTerm, monthFilter, sortField, sortDirection]);
 
-  // Agrupar por mês
+  // Agrupar transações por mês
   const transactionsByMonth = useMemo(() => {
     const groups: { [key: string]: Transaction[] } = {};
-    filteredAndSortedTransactions.forEach(t => {
-      const date = new Date(fixDateIssue(t.date));
-      const monthYear = date.toLocaleDateString('pt-BR', { year: 'numeric', month: 'long' }).replace(/de /g, '');
-      if (!groups[monthYear]) groups[monthYear] = [];
-      groups[monthYear].push(t);
+    
+    filteredAndSortedTransactions.forEach(transaction => {
+      const date = new Date(fixDateIssue(transaction.date)); // Corrigir a data aqui também
+      const monthYear = date.toLocaleDateString('pt-BR', { 
+        year: 'numeric', 
+        month: 'long' 
+      }).replace(/de /g, '');
+      
+      if (!groups[monthYear]) {
+        groups[monthYear] = [];
+      }
+      groups[monthYear].push(transaction);
     });
+    
     return groups;
   }, [filteredAndSortedTransactions]);
 
@@ -199,7 +265,7 @@ export default function TransactionsTable({ transactions, onAddTransaction, onEd
       type: 'expense',
       category: '',
       categoryIcon: '💰',
-      date: new Date().toISOString().split('T')[0],
+      date: formatDateForInput(new Date().toISOString()),
       recurring: false,
       frequency: 'monthly',
       endDate: '',
@@ -209,25 +275,25 @@ export default function TransactionsTable({ transactions, onAddTransaction, onEd
     setIsModalOpen(true);
   };
 
-  const handleEditTransaction = (t: Transaction) => {
+  const handleEditTransaction = (transaction: Transaction) => {
     setFormData({
-      description: t.description,
-      amount: Math.abs(t.amount).toString(),
-      type: t.type,
-      category: t.category,
-      categoryIcon: t.categoryIcon,
-      date: fixDateIssue(t.date),
-      recurring: t.recurring || false,
+      description: transaction.description,
+      amount: Math.abs(transaction.amount).toString(),
+      type: transaction.type,
+      category: transaction.category,
+      categoryIcon: transaction.categoryIcon,
+      date: formatDateForInput(transaction.date),
+      recurring: transaction.recurring || false,
       frequency: 'monthly',
       endDate: '',
-      nextDueDate: t.nextDueDate ? fixDateIssue(t.nextDueDate) : ''
+      nextDueDate: transaction.nextDueDate ? formatDateForInput(transaction.nextDueDate) : ''
     });
-    setSelectedTransaction(t);
+    setSelectedTransaction(transaction);
     setIsModalOpen(true);
   };
 
-  const handleDeleteTransaction = (t: Transaction) => {
-    setSelectedTransaction(t);
+  const handleDeleteTransaction = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
     setIsDeleteModalOpen(true);
   };
 
@@ -243,9 +309,14 @@ export default function TransactionsTable({ transactions, onAddTransaction, onEd
       nextDueDate: formData.recurring ? formData.nextDueDate : undefined
     };
 
-    if (selectedTransaction) onEditTransaction?.(selectedTransaction.id, transactionData);
-    else onAddTransaction?.(transactionData);
-
+    if (selectedTransaction) {
+      // Editar transação existente
+      onEditTransaction?.(selectedTransaction.id, transactionData);
+    } else {
+      // Adicionar nova transação
+      onAddTransaction?.(transactionData);
+    }
+    
     setIsModalOpen(false);
   };
 
@@ -258,21 +329,62 @@ export default function TransactionsTable({ transactions, onAddTransaction, onEd
   };
 
   const handleSort = (field: 'date' | 'amount' | 'description') => {
-    if (sortField === field) setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    else { setSortField(field); setSortDirection('desc'); }
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
   };
 
-  const handleInputChange = (field: keyof FormData, value: any) => setFormData(prev => ({ ...prev, [field]: value }));
+  const handleInputChange = (field: keyof FormData, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
 
-  const handleAmountChange = (value: string) => handleInputChange('amount', value.replace(/[^\d.]/g, ''));
+  const handleAmountChange = (value: string) => {
+    // Remove caracteres não numéricos, exceto ponto decimal
+    const numericValue = value.replace(/[^\d.]/g, '');
+    handleInputChange('amount', numericValue);
+  };
 
-  const incrementAmount = () => handleInputChange('amount', ((parseFloat(formData.amount) || 0) + 1).toString());
-  const decrementAmount = () => handleInputChange('amount', Math.max(0, (parseFloat(formData.amount) || 0) - 1).toString());
+  const incrementAmount = () => {
+    const currentAmount = parseFloat(formData.amount) || 0;
+    handleInputChange('amount', (currentAmount + 1).toString());
+  };
+
+  const decrementAmount = () => {
+    const currentAmount = parseFloat(formData.amount) || 0;
+    if (currentAmount > 0) {
+      handleInputChange('amount', (currentAmount - 1).toString());
+    }
+  };
+
+  const getCategoryIcon = (category: string) => {
+    if (!category) return '💰';
+    const foundCategory = transactionCategories.find(
+      cat =>
+        cat.value.toLowerCase() === category.toLowerCase() ||
+        cat.label.toLowerCase() === category.toLowerCase()
+    );
+    return foundCategory?.icon || '💰';
+  };
 
   const modalFooter = (
     <div className={styles.modalActions}>
-      <button className={styles.cancelButton} onClick={() => setIsModalOpen(false)}>Cancelar</button>
-      <button className={styles.saveButton} onClick={handleSaveTransaction} disabled={!formData.description || !formData.amount || !formData.category}>
+      <button 
+        className={styles.cancelButton} 
+        onClick={() => setIsModalOpen(false)}
+      >
+        Cancelar
+      </button>
+      <button 
+        className={styles.saveButton} 
+        onClick={handleSaveTransaction}
+        disabled={!formData.description || !formData.amount || !formData.category}
+      >
         {selectedTransaction ? 'Atualizar' : 'Adicionar'}
       </button>
     </div>
@@ -280,8 +392,18 @@ export default function TransactionsTable({ transactions, onAddTransaction, onEd
 
   const deleteModalFooter = (
     <div className={styles.modalActions}>
-      <button className={styles.cancelButton} onClick={() => setIsDeleteModalOpen(false)}>Cancelar</button>
-      <button className={styles.deleteConfirmButton} onClick={handleConfirmDelete}>Confirmar Exclusão</button>
+      <button 
+        className={styles.cancelButton} 
+        onClick={() => setIsDeleteModalOpen(false)}
+      >
+        Cancelar
+      </button>
+      <button 
+        className={styles.deleteConfirmButton} 
+        onClick={handleConfirmDelete}
+      >
+        Confirmar Exclusão
+      </button>
     </div>
   );
 
@@ -296,34 +418,65 @@ export default function TransactionsTable({ transactions, onAddTransaction, onEd
       <div className={styles.header}>
         <h3>Transações</h3>
         <div className={styles.controls}>
-          {/* Month Filter */}
-          <div className={`${styles.monthFilter} ${isMonthDropdownOpen ? styles.open : ''}`} onClick={() => setIsMonthDropdownOpen(!isMonthDropdownOpen)}>
-            <span className={styles.selectedMonth}>{months.find(m => m.value === monthFilter)?.label || 'Todos os meses'}</span>
+          <div 
+            className={`${styles.monthFilter} ${isMonthDropdownOpen ? styles.open : ''}`}
+            onClick={() => setIsMonthDropdownOpen(!isMonthDropdownOpen)}
+          >
+            <span className={styles.selectedMonth}>
+              {months.find(m => m.value === monthFilter)?.label || 'Todos os meses'}
+            </span>
             {isMonthDropdownOpen && (
               <div className={styles.dropdownOptions}>
                 {months.map(month => (
-                  <div key={month.value} className={styles.dropdownOption} onClick={() => { setMonthFilter(month.value); setIsMonthDropdownOpen(false); }}>
+                  <div
+                    key={month.value}
+                    className={styles.dropdownOption}
+                    onClick={() => {
+                      setMonthFilter(month.value);
+                      setIsMonthDropdownOpen(false);
+                    }}
+                  >
                     {month.label}
                   </div>
                 ))}
               </div>
             )}
           </div>
-
-          {/* Search */}
+          
           <div className={styles.searchBox}>
             <Search size={18} />
-            <input type="text" placeholder="Buscar transações..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+            <input
+              type="text"
+              placeholder="Buscar transações..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
-
-          {/* Filter Buttons */}
+          
           <div className={styles.filterButtons}>
-            <button className={filter === 'all' ? styles.active : ''} onClick={() => setFilter('all')}>Todas</button>
-            <button className={filter === 'income' ? styles.active : ''} onClick={() => setFilter('income')}>Receitas</button>
-            <button className={filter === 'expense' ? styles.active : ''} onClick={() => setFilter('expense')}>Despesas</button>
+            <button 
+              className={filter === 'all' ? styles.active : ''}
+              onClick={() => setFilter('all')}
+            >
+              Todas
+            </button>
+            <button 
+              className={filter === 'income' ? styles.active : ''}
+              onClick={() => setFilter('income')}
+            >
+              Receitas
+            </button>
+            <button 
+              className={filter === 'expense' ? styles.active : ''}
+              onClick={() => setFilter('expense')}
+            >
+              Despesas
+            </button>
           </div>
 
-          <button className={styles.addButton} onClick={handleAddTransaction}><Plus size={20} /></button>
+          <button className={styles.addButton} onClick={handleAddTransaction}>
+            <Plus size={20} />
+          </button>
         </div>
       </div>
 
@@ -332,35 +485,62 @@ export default function TransactionsTable({ transactions, onAddTransaction, onEd
         <div className={styles.emptyState}>
           <div className={styles.emptyIcon}>📊</div>
           <h3>Nenhuma transação encontrada</h3>
-          <p>{searchTerm || filter !== 'all' || monthFilter !== 'all' ? 'Tente ajustar os filtros de busca' : 'Adicione sua primeira transação clicando no botão +'}</p>
+          <p>
+            {searchTerm || filter !== 'all' || monthFilter !== 'all' 
+              ? 'Tente ajustar os filtros de busca'
+              : 'Adicione sua primeira transação clicando no botão +'
+            }
+          </p>
         </div>
       ) : (
         <div className={styles.table}>
-          {/* Cabeçalho */}
+          {/* Cabeçalho da tabela - Desktop */}
           <div className={styles.tableHeader}>
-            <div className={styles.sortableHeader} onClick={() => handleSort('description')}>Descrição <SortIcon field="description" /></div>
+            <div 
+              className={styles.sortableHeader}
+              onClick={() => handleSort('description')}
+            >
+              Descrição <SortIcon field="description" />
+            </div>
             <div>Categoria</div>
-            <div className={styles.sortableHeader} onClick={() => handleSort('date')}>Data <SortIcon field="date" /></div>
-            <div className={styles.sortableHeader} onClick={() => handleSort('amount')}>Valor <SortIcon field="amount" /></div>
+            <div 
+              className={styles.sortableHeader}
+              onClick={() => handleSort('date')}
+            >
+              Data <SortIcon field="date" />
+            </div>
+            <div 
+              className={styles.sortableHeader}
+              onClick={() => handleSort('amount')}
+            >
+              Valor <SortIcon field="amount" />
+            </div>
             <div>Ações</div>
           </div>
 
-          {/* Linhas por mês */}
+          {/* Transações agrupadas por mês */}
           {Object.entries(transactionsByMonth).map(([month, monthTransactions]) => (
             <div key={month}>
-              <div className={styles.monthHeader}>{month}</div>
-              {monthTransactions.map(transaction => (
+              <div className={styles.monthHeader}>
+                {month}
+              </div>
+              {monthTransactions.map((transaction) => (
                 <div key={transaction.id} className={styles.tableRow}>
                   <div className={styles.cell}>
                     <div className={styles.cellDescription}>
-                      <span className={styles.categoryIcon}>{getCategoryIcon(transaction.category)}</span>
+                      <span className={styles.categoryIcon}>
+                        {transaction.categoryIcon || getCategoryIcon(transaction.category)}
+                      </span>
                       <div>
                         <div>{transaction.description}</div>
                         {transaction.recurring && (
                           <div className={styles.recurringBadge}>
-                            <Calendar size={12} /> Recorrente
+                            <Calendar size={12} />
+                            Recorrente
                             {transaction.nextDueDate && (
-                              <span className={styles.nextDueDate}>• Próxima: {formatDateForDisplay(transaction.nextDueDate)}</span>
+                              <span className={styles.nextDueDate}>
+                                • Próxima: {formatDateForDisplay(transaction.nextDueDate)}
+                              </span>
                             )}
                           </div>
                         )}
@@ -368,16 +548,29 @@ export default function TransactionsTable({ transactions, onAddTransaction, onEd
                     </div>
                   </div>
                   <div className={styles.cell}>{transaction.category}</div>
-                  <div className={styles.cell}>{formatDateForDisplay(transaction.date)}</div>
+                  <div className={styles.cell}>
+                    {formatDateForDisplay(transaction.date)}
+                  </div>
                   <div className={`${styles.cell} ${styles.cellAmount}`}>
                     <span className={transaction.type === 'income' ? styles.income : styles.expense}>
-                      {transaction.type === 'income' ? '+' : '-'} R$ {Math.abs(transaction.amount).toFixed(2)}
+                      {transaction.type === 'income' ? '+' : '-'} 
+                      R$ {Math.abs(transaction.amount).toFixed(2)}
                     </span>
                   </div>
                   <div className={styles.cellActions}>
                     <div className={styles.actionButtons}>
-                      <button onClick={() => handleEditTransaction(transaction)} title="Editar transação"><Edit size={16} /></button>
-                      <button onClick={() => handleDeleteTransaction(transaction)} title="Excluir transação"><Trash2 size={16} /></button>
+                      <button 
+                        onClick={() => handleEditTransaction(transaction)}
+                        title="Editar transação"
+                      >
+                        <Edit size={16} />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteTransaction(transaction)}
+                        title="Excluir transação"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -387,21 +580,50 @@ export default function TransactionsTable({ transactions, onAddTransaction, onEd
         </div>
       )}
 
-      {/* Modal Adicionar/Editar */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={selectedTransaction ? 'Editar Transação' : 'Nova Transação'} footer={modalFooter} width="520px">
+      {/* Modal de Adicionar/Editar Transação */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={selectedTransaction ? 'Editar Transação' : 'Nova Transação'}
+        footer={modalFooter}
+        width="520px" // Aumentei um pouco para evitar cortes
+      >
         <div className={styles.modalForm}>
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
               <label>Descrição *</label>
-              <input type="text" placeholder="Descrição da transação" value={formData.description} onChange={e => handleInputChange('description', e.target.value)} />
+              <input 
+                type="text" 
+                placeholder="Descrição da transação"
+                value={formData.description}
+                onChange={(e) => handleInputChange('description', e.target.value)}
+              />
             </div>
             <div className={styles.formGroup}>
               <label>Valor *</label>
               <div className={styles.numberInputWrapper}>
-                <input type="text" className={styles.numberInput} placeholder="0,00" value={formData.amount} onChange={e => handleAmountChange(e.target.value)} />
+                <input 
+                  type="text" 
+                  className={styles.numberInput}
+                  placeholder="0,00"
+                  value={formData.amount}
+                  onChange={(e) => handleAmountChange(e.target.value)}
+                />
                 <div className={styles.numberControls}>
-                  <button className={styles.numberBtn} type="button" onClick={incrementAmount}>+</button>
-                  <button className={styles.numberBtn} type="button" onClick={decrementAmount}>-</button>
+                  <button 
+                    className={styles.numberBtn}
+                    onClick={incrementAmount}
+                    type="button"
+                  >
+                    +
+                  </button>
+                  <button 
+                    className={styles.numberBtn}
+                    onClick={decrementAmount}
+                    type="button"
+                  >
+                    -
+                  </button>
                 </div>
               </div>
             </div>
@@ -410,27 +632,101 @@ export default function TransactionsTable({ transactions, onAddTransaction, onEd
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
               <label>Tipo *</label>
-              <CustomSelect options={typeOptions} value={formData.type} onChange={value => handleInputChange('type', value as 'income' | 'expense')} placeholder="Selecione o tipo" />
+              <CustomSelect
+                options={typeOptions}
+                value={formData.type}
+                onChange={(value) => handleInputChange('type', value as 'income' | 'expense')}
+                placeholder="Selecione o tipo"
+              />
             </div>
             <div className={styles.formGroup}>
               <label>Data *</label>
-              <input type="date" value={formData.date.split('T')[0]} onChange={e => handleInputChange('date', e.target.value)} />
+              <input 
+                type="date" 
+                value={formData.date}
+                onChange={(e) => handleInputChange('date', e.target.value)}
+              />
             </div>
           </div>
 
           <div className={styles.formGroup}>
             <label>Categoria *</label>
-            <CustomSelect options={transactionCategories} value={formData.category} onChange={value => handleInputChange('category', value)} placeholder="Selecione uma categoria" />
+            <CustomSelect
+              options={transactionCategories}
+              value={formData.category}
+              onChange={(value) => {
+                handleInputChange('category', value);
+                handleInputChange('categoryIcon', getCategoryIcon(value));
+              }}
+              placeholder="Selecione uma categoria"
+            />
+          </div>
+
+          {/* Seção de Recorrência */}
+          <div className={styles.recurringSection}>
+            <label className={styles.checkboxLabel}>
+              <input 
+                type="checkbox" 
+                className={styles.checkboxInput}
+                checked={formData.recurring}
+                onChange={(e) => handleInputChange('recurring', e.target.checked)}
+              />
+              <span className={styles.checkboxCustom}></span>
+              Transação Recorrente
+            </label>
+
+            {formData.recurring && (
+              <div className={styles.recurringFields}>
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label>Frequência</label>
+                    <div className={styles.selectWrapper}> {/* Wrapper para evitar cortes */}
+                      <CustomSelect
+                        options={frequencyOptions}
+                        value={formData.frequency || 'monthly'}
+                        onChange={(value) => handleInputChange('frequency', value as 'weekly' | 'monthly' | 'yearly')}
+                        placeholder="Selecione a frequência"
+                      />
+                    </div>
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label>Data Final</label>
+                    <input 
+                      type="date" 
+                      value={formData.endDate}
+                      onChange={(e) => handleInputChange('endDate', e.target.value)}
+                    />
+                  </div>
+                </div>
+                {formData.nextDueDate && (
+                  <div className={styles.nextDueInfo}>
+                    <Calendar size={16} />
+                    Próxima transação: {formatDateForDisplay(formData.nextDueDate)}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </Modal>
 
-      {/* Modal Excluir */}
-      <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} title="Confirmar Exclusão" footer={deleteModalFooter} width="400px">
+      {/* Modal de Confirmação de Exclusão */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title="Confirmar Exclusão"
+        footer={deleteModalFooter}
+        width="400px"
+      >
         <div className={styles.confirmContent}>
           <div className={styles.confirmIcon}>⚠️</div>
-          <p>Tem certeza que deseja excluir a transação <strong>"{selectedTransaction?.description}"</strong>?</p>
-          <p className={styles.warningText}>Esta ação não pode ser desfeita.</p>
+          <p>
+            Tem certeza que deseja excluir a transação 
+            <strong> "{selectedTransaction?.description}"</strong>?
+          </p>
+          <p className={styles.warningText}>
+            Esta ação não pode ser desfeita.
+          </p>
         </div>
       </Modal>
     </div>
