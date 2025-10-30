@@ -16,6 +16,7 @@
     "next": "15.5.4",
     "next-pwa": "^5.6.0",
     "react": "19.1.0",
+    "react-currency-converter": "^1.0.5",
     "react-dom": "19.1.0",
     "react-hot-toast": "^2.6.0",
     "react-loading-skeleton": "^3.5.0",

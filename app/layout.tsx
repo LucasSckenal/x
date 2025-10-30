@@ -1,16 +1,16 @@
 import { Toaster } from 'react-hot-toast';
 import './styles/globals.scss';
-import { TransactionsProvider } from './context/TransactionsContext';
+import { SettingsProvider } from './contexts/SettingsContext';
 
 export const metadata = {
-  title: 'Next Finance - Controle Financeiro',
+  title: 'Orion - Controle Financeiro',
   description: 'Aplicativo de controle financeiro pessoal',
   manifest: '/manifest.json',
   themeColor: '#8b5cf6',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Next Finance',
+    title: 'Orion',
   },
   viewport: {
     width: 'device-width',
@@ -21,13 +21,13 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" data-theme="dark"> 
       <head>
         {/* Meta tags para PWA */}
-        <meta name="application-name" content="Next Finance" />
+        <meta name="application-name" content="Orion" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Next Finance" />
+        <meta name="apple-mobile-web-app-title" content="Orion" />
         <meta name="description" content="Controle suas finanças pessoais" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
@@ -74,7 +74,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             },
           }}
         />
+        <SettingsProvider>
         {children}
+        </SettingsProvider>
       </body>
     </html>
   );

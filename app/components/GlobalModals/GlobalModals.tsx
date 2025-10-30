@@ -1,7 +1,7 @@
 // components/GlobalModals.tsx - VERSÃO ATUALIZADA
 'use client';
 
-import { useModal } from '../../context/ModalContext';
+import { useModal } from '../../contexts/ModalContext';
 import { ConfirmDeleteModal, EditTransactionModal, CreateTransactionModal } from '../TransactionsTable/TransactionsTable';
 import { useTransactions } from '../../hooks/useTransactions'; // 👈 ADICIONAR HOOK
 

@@ -4,7 +4,11 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { db, auth } from '../lib/firebase';
-import { collection, query, onSnapshot, orderBy, where, getDocs, writeBatch, Timestamp, doc } from 'firebase/firestore';
+import { 
+  collection, query, onSnapshot, orderBy, where, getDocs, 
+  writeBatch, Timestamp, doc, 
+  addDoc, updateDoc, deleteDoc, serverTimestamp // <-- ADICIONE ESTAS
+} from 'firebase/firestore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
@@ -21,6 +25,7 @@ import PieChartCard from '../components/PieChartCard/PieChartCard';
 
 
 import styles from './Dashboard.module.scss';
+import toast from 'react-hot-toast';
 
 // Sua função de transações recorrentes
 const calculateNextDueDate = (currentDate: Date, frequency: string): Date => {
@@ -139,6 +144,119 @@ function DashboardClient() {
     if (!user) return (
         <div className={styles.pageWrap}><Header /><div className={styles.loading}>Por favor, faça login para ver seu dashboard.</div></div>
     );
+
+
+        const handleAddTransaction = async (transaction: Omit<Transaction, 'id'>) => {
+        if (!user) return;
+
+        try {
+            // FIX: Interpreta a string "YYYY-MM-DD" como meia-noite LOCAL
+            const [year, month, day] = transaction.date.split('-').map(Number);
+            const localDate = new Date(year, month - 1, day); // month - 1 (JS é base 0)
+
+            await addDoc(collection(db, `users/${user.uid}/transactions`), {
+            ...transaction,
+            date: Timestamp.fromDate(localDate), // Salva a data local correta
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+            });
+            toast.success('Transação adicionada com sucesso!');
+        } catch (error) {
+            console.error('Erro ao adicionar transação:', error);
+            toast.error('Erro ao adicionar transação');
+        }
+        };
+
+
+const handleEditTransaction = async (id: string, updatedData: Omit<Transaction, 'id'>) => {
+if (!user) return;
+
+try {
+    // FIX: Interpreta a string "YYYY-MM-DD" como meia-noite LOCAL
+    const [year, month, day] = updatedData.date.split('-').map(Number);
+    const localDate = new Date(year, month - 1, day); // month - 1 (JS é base 0)
+
+    await updateDoc(doc(db, `users/${user.uid}/transactions`, id), {
+    ...updatedData,
+    date: Timestamp.fromDate(localDate), // Salva a data local correta
+    updatedAt: serverTimestamp(),
+    });
+    toast.success('Transação atualizada com sucesso!');
+} catch (error) {
+    console.error('Erro ao atualizar transação:', error);
+    toast.error('Erro ao atualizar transação');
+}
+};
+
+        const handleDeleteTransaction = async (id: string) => {
+        if (!user) return;
+
+        try {
+            await deleteDoc(doc(db, `users/${user.uid}/transactions`, id));
+            toast.success('Transação excluída!');
+        } catch (error) {
+            console.error('Erro ao excluir transação:', error);
+            toast.error('Erro ao excluir transação');
+        }
+        };
+
+
+    const handleAddInvestment = async (newInvestment: Omit<Investment, 'id'>) => {
+        if (!user) {
+            toast.error('Usuário não autenticado');
+            return;
+        }
+        
+        try {
+            await addDoc(collection(db, `users/${user.uid}/investments`), {
+            ...newInvestment,
+            value: Number(newInvestment.value), // ✅ CONVERTE PARA NÚMERO
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+            });
+            // O toast será mostrado pelo componente Investments
+        } catch (error) {
+            console.error('Erro ao adicionar investimento:', error);
+            throw error;
+        }
+    };
+
+    const handleDeleteInvestment = async (id: string) => {
+        if (!user) return;
+        
+        try {
+            await deleteDoc(doc(db, `users/${user.uid}/investments`, id));
+        } catch (error) {
+            console.error('Erro ao excluir investimento:', error);
+            throw error;
+        }
+    };
+
+    const handleRefreshData = async () => {
+        setIsRefreshing(true);
+        try {
+            // Simula um refresh - você pode adicionar lógica real aqui
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        } catch (error) {
+            console.error('Erro ao atualizar dados:', error);
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
+
+    const handleChangeInvestment = async (investmentId: string, updatedData: Partial<Investment>) => {
+        if (!user) return;
+        
+        try {
+            await updateDoc(doc(db, `users/${user.uid}/investments`, investmentId), {
+                ...updatedData,
+                updatedAt: serverTimestamp()
+            });
+            console.log('Investimento atualizado com sucesso');
+        } catch (error) {
+            console.error('Erro ao atualizar investimento:', error);
+        }
+    };
     
     return (
         <div className={styles.pageWrap}>
@@ -153,27 +271,35 @@ function DashboardClient() {
                     
                     <div className={styles.dashboardGrid}>
                         <div className={styles.gridMain}>
-                           <motion.div variants={sectionVariants} className={styles.widgetCard}><TransactionsTable transactions={allTransactions} /></motion.div>
-                           <motion.div variants={sectionVariants} className={styles.widgetCard}><Investments investments={allInvestments} /></motion.div>
-                           <motion.div variants={sectionVariants} className={styles.widgetCard}><Budgets transactions={allTransactions}  /></motion.div>
+                           <motion.div variants={sectionVariants} className={styles.widgetCard}><TransactionsTable
+                            transactions={allTransactions.map(t => ({
+                                ...t,
+                                // Garante que datas do Firestore sejam legíveis no componente
+                                date: t.date?.toDate ? t.date.toDate().toISOString() : t.date,
+                                nextDueDate: t.nextDueDate?.toDate ? t.nextDueDate.toDate().toISOString() : t.nextDueDate,
+                            }))}
+                            onAddTransaction={handleAddTransaction}
+                            onEditTransaction={handleEditTransaction}
+                            onDeleteTransaction={handleDeleteTransaction}
+                            /></motion.div>
+                           <motion.div variants={sectionVariants} className={styles.widgetCard}><Investments 
+                                investments={allInvestments}
+                                isLoading={loading}
+                                user={user}
+                                onAddInvestment={handleAddInvestment} // ✅ Agora está sendo passada
+                                onDeleteInvestment={handleDeleteInvestment}
+                                onEditInvestment={handleChangeInvestment}
+                                onRefreshData={handleRefreshData} isRefreshing={false}/></motion.div>
+                           
                         </div>
                         <div className={styles.gridSidebar}>
                             <motion.div variants={sectionVariants} className={styles.widgetCard}><Charts transactions={allTransactions} /></motion.div>
-                            <motion.div variants={sectionVariants} className={styles.widgetCard}><PieChartCard transactions={allTransactions} /></motion.div>
+                            <motion.div variants={sectionVariants} className={styles.widgetCard}><Budgets transactions={allTransactions}  /></motion.div>
                             <motion.div variants={sectionVariants} className={styles.widgetCard}><Goals goals={allGoals} /></motion.div>
                         </div>
                     </div>
                 </motion.div>
             </main>
-            <AnimatePresence>
-              {modalType === 'add-transaction' && <AddTransactionModal onClose={closeModal} />}
-              {modalType === 'edit-transaction' && transactionId && (
-                <EditTransactionModal 
-                    onClose={closeModal}
-                    transactionId={transactionId}
-                />
-              )}
-            </AnimatePresence>
         </div>
     );
 }
@@ -184,4 +310,8 @@ export default function DashboardPage() {
             <DashboardClient />
         </Suspense>
     );
+}
+
+function setIsRefreshing(arg0: boolean) {
+    throw new Error('Function not implemented.');
 }

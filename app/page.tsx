@@ -20,6 +20,9 @@ import { Goal } from './components/Goals/Goals';
 import RecentActivity from './components/RecentActivity/RecentActivity';
 import GoalsPreview from './components/GoalsPreview/GoalsPreview';
 
+// Importar o SettingsContext
+import { useSettings } from './contexts/SettingsContext';
+
 import styles from './HomePage.module.scss';
 
 // Sistema de dicas do dia
@@ -155,19 +158,19 @@ const EMOJI_OPTIONS = [
 ];
 
 const QuickActionButton = ({ href, icon: Icon, title, description }: any) => (
-    <motion.div
-        whileHover={{ y: -5, scale: 1.03 }}
-        transition={{ type: 'spring', stiffness: 300 }}
-    >
-        <Link href={href} className={styles.actionCard}>
-            <div className={styles.actionIconWrapper}>
-                <Icon size={22} />
-            </div>
-            <div className={styles.hoverInfo}>
-                <h4 className={styles.actionTitle}>{title}</h4>
-                <p className={styles.actionDescription}>{description}</p>
-            </div>
-        </Link>
+  <motion.div
+    whileHover={{ y: -5, scale: 1.03 }}
+    transition={{ type: 'spring', stiffness: 300 }}
+  >
+    <Link href={href} className={styles.actionCard}>
+      <div className={styles.actionIconWrapper}>
+        <Icon size={22} />
+      </div>
+      <div className={styles.hoverInfo}>
+        <h4 className={styles.actionTitle}>{title}</h4>
+        <p className={styles.actionDescription}>{description}</p>
+      </div>
+    </Link>
   </motion.div>
 );
 
@@ -220,7 +223,19 @@ const DailyTip = () => {
   );
 };
 
-const HeroSection = ({ user, totalBalance, income, expense }: { user: User, totalBalance: number, income: number, expense: number }) => {
+const HeroSection = ({ 
+  user, 
+  totalBalance, 
+  income, 
+  expense, 
+  currency 
+}: { 
+  user: User; 
+  totalBalance: number; 
+  income: number; 
+  expense: number;
+  currency: string;
+}) => {
   const heroRef = useRef<HTMLElement>(null);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLElement>) => {
@@ -230,6 +245,16 @@ const HeroSection = ({ user, totalBalance, income, expense }: { user: User, tota
     const y = e.clientY - rect.top;
     heroRef.current.style.setProperty('--mouse-x', `${x}px`);
     heroRef.current.style.setProperty('--mouse-y', `${y}px`);
+  };
+
+  // Função para formatar valores com a moeda configurada
+  const formatCurrency = (value: number): string => {
+    return value.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
   };
 
   return (
@@ -257,7 +282,7 @@ const HeroSection = ({ user, totalBalance, income, expense }: { user: User, tota
               animate={{ rotate: [0, 14, -8, 14, 0] }} 
               transition={{ duration: 2, ease: "easeInOut", repeat: Infinity, repeatDelay: 4 }}
             >
-                👋
+              👋
             </motion.span>
           </h1>
           <p className={styles.heroSubtitle}>
@@ -269,29 +294,39 @@ const HeroSection = ({ user, totalBalance, income, expense }: { user: User, tota
       <div className={styles.heroBalance}>
         <div className={styles.balanceLabel}>Seu Saldo Atual</div>
         <h2 className={styles.balanceValue}>
-          {Number.isFinite(totalBalance) ? totalBalance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00'}
+          {Number.isFinite(totalBalance) ? formatCurrency(totalBalance) : formatCurrency(0)}
         </h2>
         <div className={styles.miniBalanceRow}>
-            <div className={styles.miniBalanceCard}>
-                <TrendingUp size={16} color="var(--positive)" />
-                <div className={styles.cardValuePositive}>
-                    {income.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                </div>
+          <div className={styles.miniBalanceCard}>
+            <TrendingUp size={16} color="var(--positive)" />
+            <div className={styles.cardValuePositive}>
+              {formatCurrency(income)}
             </div>
-            <div className={styles.miniBalanceCard}>
-                <TrendingDown size={16} color="var(--negative)" />
-                <div className={styles.cardValueNegative}>
-                    {expense.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                </div>
+          </div>
+          <div className={styles.miniBalanceCard}>
+            <TrendingDown size={16} color="var(--negative)" />
+            <div className={styles.cardValueNegative}>
+              {formatCurrency(expense)}
             </div>
+          </div>
         </div>
       </div>
     </motion.section>
   );
 };
 
-// Componentes de Modal (mantidos iguais)
-const NewGoalModal = ({ isOpen, onClose, onGoalCreated }: { isOpen: boolean, onClose: () => void, onGoalCreated: (goal: Goal) => void }) => {
+// Componentes de Modal atualizados
+const NewGoalModal = ({ 
+  isOpen, 
+  onClose, 
+  onGoalCreated,
+  currency 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  onGoalCreated: (goal: Goal) => void;
+  currency: string;
+}) => {
   const [title, setTitle] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
   const [emoji, setEmoji] = useState('🎯');
@@ -370,7 +405,7 @@ const NewGoalModal = ({ isOpen, onClose, onGoalCreated }: { isOpen: boolean, onC
           </div>
 
           <div className={styles.formGroup}>
-            <label>Valor Desejado (R$)</label>
+            <label>Valor Desejado ({currency})</label>
             <input
               type="number"
               value={targetAmount}
@@ -396,17 +431,35 @@ const NewGoalModal = ({ isOpen, onClose, onGoalCreated }: { isOpen: boolean, onC
   );
 };
 
-const AddFundsModal = ({ isOpen, onClose, goalId, goals, onFundsAdded }: { 
-  isOpen: boolean, 
-  onClose: () => void, 
-  goalId: string | null, 
-  goals: Goal[],
-  onFundsAdded: () => void 
+const AddFundsModal = ({ 
+  isOpen, 
+  onClose, 
+  goalId, 
+  goals, 
+  onFundsAdded,
+  currency 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  goalId: string | null; 
+  goals: Goal[];
+  onFundsAdded: () => void;
+  currency: string;
 }) => {
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
 
   const goal = goals.find(g => g.id === goalId);
+
+  // Função para formatar valores com a moeda configurada
+  const formatCurrency = (value: number): string => {
+    return value.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -467,7 +520,7 @@ const AddFundsModal = ({ isOpen, onClose, goalId, goals, onFundsAdded }: {
             <span className={styles.title}>{goal.title}</span>
           </div>
           <div className={styles.progressInfo}>
-            <span>{goal.currentAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} de {goal.targetAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+            <span>{formatCurrency(goal.currentAmount)} de {formatCurrency(goal.targetAmount)}</span>
             <span>{progress.toFixed(0)}%</span>
           </div>
           <div className={styles.progressBar}>
@@ -480,7 +533,7 @@ const AddFundsModal = ({ isOpen, onClose, goalId, goals, onFundsAdded }: {
 
         <form onSubmit={handleSubmit} className={styles.modalForm}>
           <div className={styles.formGroup}>
-            <label>Valor para Adicionar (R$)</label>
+            <label>Valor para Adicionar ({currency})</label>
             <input
               type="number"
               value={amount}
@@ -518,6 +571,10 @@ export default function HomePage() {
   const [isAddFundsModalOpen, setIsAddFundsModalOpen] = useState(false);
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
 
+  // Obter configurações do usuário
+  const { settings, formatCurrency } = useSettings();
+  const currency = settings.currency || 'BRL';
+
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -531,35 +588,35 @@ export default function HomePage() {
     
     const transQuery = query(collection(db, `users/${user.uid}/transactions`), orderBy('date', 'desc'));
     const unsubTrans = onSnapshot(transQuery, (snapshot) => {
-        const transactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
-        setAllTransactions(transactions);
+      const transactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+      setAllTransactions(transactions);
 
-        const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-        let totalBalance = 0;
-        let monthlyIncome = 0;
-        let monthlyExpense = 0;
+      let totalBalance = 0;
+      let monthlyIncome = 0;
+      let monthlyExpense = 0;
 
-        transactions.forEach(t => {
-            const amount = Number(t.amount) || 0;
-            if (t.type === 'income') {
-                totalBalance += amount;
-            } else {
-                totalBalance -= amount;
-            }
-            const transactionDate = t.date.toDate();
-            if (transactionDate >= startOfMonth) {
-                if (t.type === 'income') monthlyIncome += amount;
-                else monthlyExpense += amount;
-            }
-        });
-        setDashboardData({ totalBalance, income: monthlyIncome, expense: monthlyExpense });
+      transactions.forEach(t => {
+        const amount = Number(t.amount) || 0;
+        if (t.type === 'income') {
+          totalBalance += amount;
+        } else {
+          totalBalance -= amount;
+        }
+        const transactionDate = t.date.toDate();
+        if (transactionDate >= startOfMonth) {
+          if (t.type === 'income') monthlyIncome += amount;
+          else monthlyExpense += amount;
+        }
+      });
+      setDashboardData({ totalBalance, income: monthlyIncome, expense: monthlyExpense });
     });
 
     const goalsQuery = query(collection(db, `users/${user.uid}/goals`));
     const unsubGoals = onSnapshot(goalsQuery, (snapshot) => {
-        setAllGoals(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Goal)));
+      setAllGoals(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Goal)));
     });
 
     return () => { unsubTrans(); unsubGoals(); };
@@ -602,13 +659,19 @@ export default function HomePage() {
     <div className={styles.pageWrap}>
       <Header />
       <main className={styles.container}>
-        <HeroSection user={user} totalBalance={dashboardData.totalBalance} income={dashboardData.income} expense={dashboardData.expense} />
+        <HeroSection 
+          user={user} 
+          totalBalance={dashboardData.totalBalance} 
+          income={dashboardData.income} 
+          expense={dashboardData.expense}
+          currency={currency}
+        />
 
         <motion.div 
-            className={styles.mainGrid}
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
+          className={styles.mainGrid}
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
         >
           <div className={styles.mainColumn}>
             <motion.section variants={itemVariants}>
@@ -616,7 +679,7 @@ export default function HomePage() {
               <div className={styles.actionsGrid}>
                 <QuickActionButton href="/dashboard?modal=transaction" icon={Plus} title="Nova Transação" description="Adicione receitas ou despesas"/>
                 <QuickActionButton href="/dashboard" icon={LayoutDashboard} title="Dashboard Completo" description="Visão detalhada e relatórios"/>
-                <QuickActionButton href="/dashboard?modal=investment" icon={TrendingUp} title="Adicionar Investimento" description="Faça seu dinheiro render"/>
+                <QuickActionButton href="/investments" icon={TrendingUp} title="Adicionar Investimento" description="Faça seu dinheiro render"/>
               </div>
             </motion.section>
 
@@ -625,7 +688,10 @@ export default function HomePage() {
                 <h3 className={styles.sectionTitle}>Insights do Mês</h3>
                 <Link href="/dashboard" className={styles.sectionLink}>Ver todos <ArrowRight size={14} /></Link>
               </div>
-              <PieChartCard transactions={allTransactions} />
+              <PieChartCard 
+                transactions={allTransactions} 
+                currency={currency}
+              />
               <p className={styles.monthInsightText}>
                 {allTransactions.length === 0 ? 'Adicione transações para ver insights.' : 'Continue monitorando seus gastos para atingir suas metas.'}
               </p>
@@ -635,11 +701,15 @@ export default function HomePage() {
 
           <aside className={styles.sidebarColumn}>
             <motion.div variants={itemVariants}>
-              <RecentActivity transactions={allTransactions} />
+              <RecentActivity 
+                transactions={allTransactions} 
+                currency={currency}
+              />
             </motion.div>
             <motion.div variants={itemVariants}>
               <GoalsPreview
                 goals={allGoals}
+                currency={currency}
                 onAddNewGoal={() => setIsNewGoalModalOpen(true)}
                 onAddFunds={(goalId) => {
                   setSelectedGoalId(goalId);
@@ -656,6 +726,7 @@ export default function HomePage() {
         isOpen={isNewGoalModalOpen}
         onClose={() => setIsNewGoalModalOpen(false)}
         onGoalCreated={handleGoalCreated}
+        currency={currency}
       />
       
       <AddFundsModal
@@ -666,6 +737,7 @@ export default function HomePage() {
         }}
         goalId={selectedGoalId}
         goals={allGoals}
+        currency={currency}
         onFundsAdded={handleFundsAdded}
       />
     </div>

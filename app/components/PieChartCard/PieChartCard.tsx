@@ -1,164 +1,348 @@
+// PieChartCard.tsx
+
 'use client';
 
-import { useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
   PieChart,
   Pie,
   Cell,
   Tooltip,
   ResponsiveContainer,
-  Sector
+  Sector,
 } from 'recharts';
+import { motion, AnimatePresence } from 'framer-motion';
+import { PieChart as PieChartIcon } from 'lucide-react';
 import styles from './PieChartCard.module.scss';
 import { Transaction } from '../TransactionsTable/TransactionsTable';
 
 interface PieChartProps {
   transactions: Transaction[];
+  title?: string;
+  loading?: boolean;
+  onCategorySelect?: (category: string | null) => void;
+  currency: string; // Nova prop para a moeda
 }
 
-const COLORS = ['#8b5cf6', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#ec4899', '#14b8a6'];
+// Paleta de cores profissional e acessível
+const PROFESSIONAL_COLORS = [
+  '#8b5cf6', '#10b981', '#3b82f6', '#f59e0b', '#ef4444', 
+  '#ec4899', '#14b8a6', '#84cc16', '#f97316', '#06b6d4'
+];
 
-const generateColor = (str: string) => {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  const color = (hash & 0x00FFFFFF).toString(16).toUpperCase();
-  return '#' + '000000'.substring(0, 6 - color.length) + color;
+// Tipagem para dados do gráfico
+interface ChartData {
+  name: string;
+  value: number;
+  percentage: number;
+  color: string;
+}
+
+// Função auxiliar para garantir que o valor seja número
+const ensureNumber = (value: any): number => {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') {
+    // Remove caracteres não numéricos exceto ponto e vírgula
+    const cleaned = value.replace(/[^\d,.-]/g, '');
+    // Substitui vírgula por ponto para parseFloat
+    const normalized = cleaned.replace(',', '.');
+    return parseFloat(normalized) || 0;
+  }
+  return 0;
 };
 
-export default function PieChartCard({ transactions }: PieChartProps) {
-  const { expenseByCategory, totalExpenses, topExpenses } = useMemo(() => {
-    const map: Record<string, number> = {};
-    let total = 0;
+// Hook para cálculos de dados
+const useChartData = (transactions: Transaction[]) => {
+  return useMemo(() => {
+    const categoryMap: Record<string, number> = {};
+    let totalExpenses = 0;
 
+    // Processar transações
     transactions
-      .filter((t) => t.type === 'expense')
-      .forEach((t) => {
-        const cat = t.category || 'Outros';
-        map[cat] = (map[cat] || 0) + t.amount;
-        total += t.amount;
+      .filter(transaction => transaction.type === 'expense')
+      .forEach(transaction => {
+        const category = transaction.category?.trim() || 'Outras';
+        const amount = ensureNumber(transaction.amount);
+        categoryMap[category] = (categoryMap[category] || 0) + amount;
+        totalExpenses += amount;
       });
 
-    const sorted = Object.entries(map)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
+    // Preparar dados para o gráfico
+    const chartData: ChartData[] = Object.entries(categoryMap)
+      .sort(([, a], [, b]) => b - a)
+      .map(([name, value], index) => ({
+        name,
+        value,
+        percentage: totalExpenses > 0 ? (value / totalExpenses) * 100 : 0,
+        color: PROFESSIONAL_COLORS[index % PROFESSIONAL_COLORS.length]
+      }));
 
     return {
-      expenseByCategory: sorted,
-      totalExpenses: total,
-      topExpenses: sorted.slice(0, 4),
+      chartData,
+      totalExpenses,
+      categoryCount: chartData.length
     };
   }, [transactions]);
+};
+
+// Função de formatação de porcentagem
+const formatPercentage = (value: number): string => {
+  return `${value.toFixed(1)}%`;
+};
+
+// Componente de loading profissional
+const ChartSkeleton = () => (
+  <div className={styles.skeletonContainer}>
+    <div className={styles.skeletonHeader}>
+      <div className={styles.skeletonText}></div>
+    </div>
+    <div className={styles.skeletonChart}></div>
+  </div>
+);
+
+export default function PieChartCard({ 
+  transactions, 
+  title = "Análise de Gastos por Categoria",
+  loading = false,
+  onCategorySelect,
+  currency // Recebe a moeda como prop
+}: PieChartProps) {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [isolatedCategory, setIsolatedCategory] = useState<string | null>(null);
+
+  const { 
+    chartData, 
+    totalExpenses, 
+    categoryCount 
+  } = useChartData(transactions);
+
+  // Função de formatação que usa a moeda passada por prop
+  const formatCurrency = (value: number): string => {
+    return value.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  };
+
+  // Handlers com useCallback
+  const handlePieEnter = useCallback((_: any, index: number) => {
+    setActiveIndex(index);
+  }, []);
+
+  const handlePieLeave = useCallback(() => {
+    setActiveIndex(null);
+  }, []);
+
+  const handleLegendClick = useCallback((categoryName: string) => {
+    const newIsolatedCategory = isolatedCategory === categoryName ? null : categoryName;
+    setIsolatedCategory(newIsolatedCategory);
+    onCategorySelect?.(newIsolatedCategory);
+  }, [isolatedCategory, onCategorySelect]);
+
+  const handleSectorClick = useCallback((data: ChartData) => {
+    handleLegendClick(data.name);
+  }, [handleLegendClick]);
+
+  // Dados filtrados para isolamento de categoria
+  const filteredData = useMemo(() => {
+    if (!isolatedCategory) return chartData;
+    
+    const isolated = chartData.find(item => item.name === isolatedCategory);
+    const others = chartData.filter(item => item.name !== isolatedCategory);
+    const othersTotal = others.reduce((sum, item) => sum + item.value, 0);
+    
+    return [
+      ...(isolated ? [isolated] : []),
+      ...(othersTotal > 0 ? [{
+        name: 'Outras Categorias',
+        value: othersTotal,
+        percentage: (othersTotal / totalExpenses) * 100,
+        color: 'rgba(100, 100, 100, 0.3)'
+      }] : [])
+    ];
+  }, [chartData, isolatedCategory, totalExpenses]);
+
+  // Renderização condicional
+  if (loading) {
+    return <ChartSkeleton />;
+  }
+
+  const hasData = chartData.length > 0;
 
   return (
-    <div className={styles.container}>
-      <div className={styles.chartArea}>
-        {expenseByCategory.length > 0 ? (
-          <ResponsiveContainer width="100%" height={240}>
-            <PieChart>
-              <defs>
-                {/* Gradiente e brilho */}
-                <radialGradient id="innerGlow" cx="50%" cy="50%" r="70%">
-                  <stop offset="0%" stopColor="rgba(255,255,255,0.2)" />
-                  <stop offset="100%" stopColor="rgba(139,92,246,0.05)" />
-                </radialGradient>
-              </defs>
-
-              <Pie
-                data={expenseByCategory}
-                innerRadius={70}
-                outerRadius={95}
-                paddingAngle={4}
-                dataKey="value"
-                startAngle={90}
-                endAngle={450}
-                stroke="rgba(0,0,0,0.3)"
-                strokeWidth={1.5}
-                animationBegin={100}
-                animationDuration={1600}
-                isAnimationActive={true}
-                labelLine={false}
-              >
-                {expenseByCategory.map((entry, i) => (
-                  <Cell
-                    key={entry.name}
-                    fill={COLORS[i % COLORS.length] || generateColor(entry.name)}
-                    style={{
-                      filter:
-                        'drop-shadow(0 0 4px rgba(139,92,246,0.3)) drop-shadow(0 0 10px rgba(0,0,0,0.3))',
-                    }}
-                  />
-                ))}
-              </Pie>
-
-             <Tooltip
-              cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-              contentStyle={{
-                background: 'rgba(20,20,25,0.9)',
-                border: '1px solid var(--glass-border)',
-                borderRadius: '10px',
-                boxShadow: '0 8px 20px rgba(0,0,0,0.4)',
-                color: 'var(--text)',
-              }}
-              labelStyle={{
-                color: 'var(--text)',
-                fontWeight: 500,
-              }}
-              itemStyle={{
-                color: 'var(--text)',
-              }}
-              formatter={(v: number, n: string) => [
-                v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-                n,
-              ]}
-            />
-            </PieChart>
-          </ResponsiveContainer>
-        ) : (
-          <div className={styles.noDataPlaceholder}></div>
-        )}
-
-        {/* Label central dinâmica */}
-        {totalExpenses > 0 && (
-          <div className={styles.centerLabel}>
-            <span>Gasto total</span>
-            <strong>
-              {totalExpenses.toLocaleString('pt-BR', {
-                style: 'currency',
-                currency: 'BRL',
-              })}
-            </strong>
-          </div>
-        )}
+    <motion.div
+      className={styles.container}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: 'easeOut' }}
+    >
+      {/* Cabeçalho simplificado */}
+      <div className={styles.header}>
+        <div className={styles.titleSection}>
+          <PieChartIcon size={20} className={styles.titleIcon} />
+          <h3 className={styles.title}>{title}</h3>
+        </div>
       </div>
 
-      <div className={styles.legendWrapper}>
-        {topExpenses.length > 0 ? (
-          <ul className={styles.legendList}>
-            {topExpenses.map((entry, i) => {
-              const pct =
-                totalExpenses > 0 ? (entry.value / totalExpenses) * 100 : 0;
-              const color = COLORS[i % COLORS.length] || generateColor(entry.name);
+      {/* Área do gráfico */}
+      <div className={styles.chartWrapper}>
+        <div className={styles.chartArea}>
+          <AnimatePresence mode="wait">
+            {hasData ? (
+              <motion.div
+                key="chart"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className={styles.chartContainer}
+              >
+                <ResponsiveContainer width="100%" height={280}>
+                  <PieChart>
+                    <Pie
+                      data={filteredData}
+                      innerRadius={80}
+                      outerRadius={activeIndex !== null ? 110 : 100}
+                      paddingAngle={2}
+                      dataKey="value"
+                      startAngle={90}
+                      endAngle={450}
+                      stroke="rgba(255,255,255,0.1)"
+                      strokeWidth={2}
+                      onMouseEnter={handlePieEnter}
+                      onMouseLeave={handlePieLeave}
+                      onClick={handleSectorClick}
+                      labelLine={false}
+                      activeIndex={activeIndex ?? undefined}
+                      activeShape={(props) => (
+                        <Sector
+                          {...props}
+                          outerRadius={props.outerRadius + 8}
+                          stroke="rgba(255,255,255,0.3)"
+                          strokeWidth={2}
+                        />
+                      )}
+                    >
+                      {filteredData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={entry.color}
+                          style={{
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease',
+                            filter: activeIndex === index 
+                              ? `drop-shadow(0 0 12px ${entry.color}40)`
+                              : 'none',
+                          }}
+                        />
+                      ))}
+                    </Pie>
+
+                    <Tooltip
+                      content={({ payload }) => (
+                        <div className={styles.customTooltip}>
+                          {payload?.map((entry: any, index) => (
+                            <div key={index} className={styles.tooltipItem}>
+                              <div 
+                                className={styles.tooltipColor} 
+                                style={{ background: entry.payload.color }}
+                              />
+                              <div className={styles.tooltipContent}>
+                                <strong>{entry.name}</strong>
+                                <span>
+                                  {formatCurrency(entry.value)}
+                                  {' • '}
+                                  {formatPercentage((entry.value / totalExpenses) * 100)}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+
+                {/* Label central */}
+                <div className={styles.centerLabel}>
+                  {activeIndex !== null && filteredData[activeIndex] ? (
+                    <>
+                      <span>{filteredData[activeIndex].name}</span>
+                      <strong>
+                        {formatCurrency(filteredData[activeIndex].value)}
+                      </strong>
+                      <small className={styles.percentSmall}>
+                        ({formatPercentage(filteredData[activeIndex].percentage)})
+                      </small>
+                    </>
+                  ) : (
+                    <>
+                      <span>Total Geral</span>
+                      <strong>
+                        {formatCurrency(totalExpenses)}
+                      </strong>
+                    </>
+                  )}
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="no-data"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className={styles.noDataState}
+              >
+                <PieChartIcon size={48} className={styles.noDataIcon} />
+                <h4>Sem dados para exibir</h4>
+                <p>Nenhuma despesa registrada no período</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <div className={styles.divider}></div>
+
+        {/* Legenda interativa */}
+        <div className={styles.legendWrapper}>
+          <div className={styles.legendHeader}>
+            <span>Categorias</span>
+            <small>{categoryCount} itens</small>
+          </div>
+          
+          <ul className={styles.legendFull}>
+            {chartData.map((item, index) => {
+              const isActive = isolatedCategory === item.name;
+              const isDimmed = isolatedCategory !== null && !isActive;
+
               return (
-                <li key={entry.name}>
-                  <div className={styles.legendHeader}>
-                    <span className={styles.colorDot} style={{ background: color }}></span>
-                    {entry.name}
-                    <span className={styles.percent}>{pct.toFixed(0)}%</span>
+                <motion.li
+                  key={item.name}
+                  className={`${styles.legendItem} ${
+                    isActive ? styles.active : ''
+                  } ${isDimmed ? styles.dimmed : ''}`}
+                  onClick={() => handleLegendClick(item.name)}
+                  whileHover={{ x: 4 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <div
+                    className={styles.colorDot}
+                    style={{ background: item.color }}
+                  />
+                  <div className={styles.legendTexts}>
+                    <span className={styles.legendName}>{item.name}</span>
+                    <span className={styles.legendValue}>
+                      {formatCurrency(item.value)}
+                      {' '}({formatPercentage(item.percentage)})
+                    </span>
                   </div>
-                  <div className={styles.legendBar}>
-                    <div
-                      className={styles.legendFill}
-                      style={{ width: `${pct}%`, background: color }}
-                    ></div>
-                  </div>
-                </li>
+                </motion.li>
               );
             })}
           </ul>
-        ) : (
-          <p className={styles.noDataMessage}>Nenhuma despesa registrada.</p>
-        )}
+        </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

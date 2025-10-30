@@ -31,7 +31,17 @@ export const transactionCategories = [
   { value: 'Investimentos', label: 'Investimentos', icon: '📈' },
   { value: 'Outros', label: 'Outros', icon: '📦' },
   { value: 'Cartão de Crédito', label: 'Cartão de Crédito', icon: '💳' },
-  { value: 'Lazer', label: 'Lazer', icon: '🎉' }
+  { value: 'Lazer', label: 'Lazer', icon: '🎉' },
+  { value: 'Moradia', label: 'Moradia', icon: '🏠' },
+  { value: 'Viagem', label: 'Viagem', icon: '✈️' },
+  { value: 'Jogos', label: 'Jogos', icon: '🎮' },
+  { value: 'Presente', label: 'Presente', icon: '🎁' },
+  { value: 'Celular', label: 'Celular', icon: '📱' },
+  { value: 'Internet', label: 'Internet', icon: '🌐' },
+  { value: 'Água', label: 'Água', icon: '🚰' },
+  { value: 'Luz', label: 'Luz', icon: '💡' },
+  { value: 'Gás', label: 'Gás', icon: '🔥' },
+
 ];
 
 const frequencyOptions = [
@@ -82,25 +92,58 @@ const fixDateIssue = (dateString: string): string => {
 
 // Função para formatar a data para o input type="date"
 const formatDateForInput = (dateString: string): string => {
-  const fixedDate = fixDateIssue(dateString);
-  
+  if (!dateString) return new Date().toISOString().split('T')[0];
+
   try {
-    const date = new Date(fixedDate);
-    if (isNaN(date.getTime())) {
-      return new Date().toISOString().split('T')[0];
+    // Se já estiver no formato YYYY-MM-DD, retorna diretamente
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      return dateString;
     }
-    return date.toISOString().split('T')[0];
+
+    // Caso o texto venha como: "20 de outubro de 2025 às 00:00:00 UTC-3"
+    const parts = dateString.match(/(\d{1,2}) de (\w+) de (\d{4})/);
+    if (parts) {
+      const day = parseInt(parts[1], 10);
+      const monthStr = parts[2].toLowerCase();
+      const year = parseInt(parts[3], 10);
+
+      const monthsMap: { [key: string]: number } = {
+        janeiro: 0, fevereiro: 1, março: 2, abril: 3, maio: 4, junho: 5,
+        julho: 6, agosto: 7, setembro: 8, outubro: 9, novembro: 10, dezembro: 11
+      };
+
+      const month = monthsMap[monthStr];
+      if (month !== undefined) {
+        const date = new Date(year, month, day);
+        // CORREÇÃO: Formata sem conversão de timezone
+        const formatted = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        return formatted;
+      }
+    }
+
+    // Para formato ISO ou outros, cria a data e formata sem timezone
+    const date = new Date(dateString);
+    if (!isNaN(date.getTime())) {
+      // CORREÇÃO: Extrai diretamente os componentes da data
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    return new Date().toISOString().split('T')[0];
   } catch {
     return new Date().toISOString().split('T')[0];
   }
 };
+
 
 // Função para formatar a data para exibição
 const formatDateForDisplay = (dateString: string): string => {
   if (!dateString) return '';
   
   try {
-    // Tenta reconhecer formato do Firebase
+    // Tenta reconhecer formato do Firebase (ex: "20 de outubro de 2025...")
     const parts = dateString.match(/(\d+) de (\w+) de (\d{4})/);
     if (parts) {
       const day = parseInt(parts[1], 10);
@@ -108,28 +151,31 @@ const formatDateForDisplay = (dateString: string): string => {
       const year = parseInt(parts[3], 10);
 
       const monthsMap: { [key: string]: number } = {
-        janeiro: 0,
-        fevereiro: 1,
-        março: 2,
-        abril: 3,
-        maio: 4,
-        junho: 5,
-        julho: 6,
-        agosto: 7,
-        setembro: 8,
-        outubro: 9,
-        novembro: 10,
-        dezembro: 11
+        janeiro: 0, fevereiro: 1, março: 2, abril: 3, maio: 4, junho: 5,
+        julho: 6, agosto: 7, setembro: 8, outubro: 9, novembro: 10, dezembro: 11
       };
 
       const month = monthsMap[monthStr];
       if (month !== undefined) {
-        const date = new Date(year, month, day);
+        const date = new Date(year, month, day); // Isso cria data LOCAL
         return date.toLocaleDateString('pt-BR');
       }
     }
 
-    // fallback para ISO ou outros formatos
+    // --- INÍCIO DA CORREÇÃO ---
+    // Checa se é uma string YYYY-MM-DD (como o nextDueDate)
+    const isoParts = dateString.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (isoParts) {
+      const year = parseInt(isoParts[1], 10);
+      const month = parseInt(isoParts[2], 10) - 1; // Mês base 0
+      const day = parseInt(isoParts[3], 10);
+      // Cria a data como LOCAL (meia-noite no fuso do usuário)
+      const date = new Date(year, month, day); 
+      return date.toLocaleDateString('pt-BR');
+    }
+    // --- FIM DA CORREÇÃO ---
+
+    // fallback para Timestamps completos (que já incluem fuso)
     const date = new Date(dateString);
     if (!isNaN(date.getTime())) {
       return date.toLocaleDateString('pt-BR');
@@ -189,7 +235,7 @@ export default function TransactionsTable({
 
   // Filtragem e ordenação
   const filteredAndSortedTransactions = useMemo(() => {
-    let filtered = transactions.filter(transaction => {
+    const filtered = transactions.filter(transaction => {
       // Filtro por tipo
       if (filter !== 'all' && transaction.type !== filter) return false;
       
@@ -275,50 +321,93 @@ export default function TransactionsTable({
     setIsModalOpen(true);
   };
 
-  const handleEditTransaction = (transaction: Transaction) => {
-    setFormData({
-      description: transaction.description,
-      amount: Math.abs(transaction.amount).toString(),
-      type: transaction.type,
-      category: transaction.category,
-      categoryIcon: transaction.categoryIcon,
-      date: formatDateForInput(transaction.date),
-      recurring: transaction.recurring || false,
-      frequency: 'monthly',
-      endDate: '',
-      nextDueDate: transaction.nextDueDate ? formatDateForInput(transaction.nextDueDate) : ''
-    });
-    setSelectedTransaction(transaction);
-    setIsModalOpen(true);
-  };
+const handleEditTransaction = (transaction: Transaction) => {
+  setFormData({
+    description: transaction.description,
+    amount: Math.abs(transaction.amount).toString(),
+    type: transaction.type,
+    category: transaction.category,
+    categoryIcon: transaction.categoryIcon,
+    date: formatDateForInput(transaction.date),
+    recurring: transaction.recurring || false,
+    frequency: transaction.recurringFrequency || 'monthly',
+    endDate: transaction.recurringEndDate ? formatDateForInput(transaction.recurringEndDate) : '',
+    nextDueDate: transaction.nextDueDate ? formatDateForInput(transaction.nextDueDate) : ''
+  });
+  setSelectedTransaction(transaction);
+  setIsModalOpen(true);
+};
+
 
   const handleDeleteTransaction = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
     setIsDeleteModalOpen(true);
   };
 
-  const handleSaveTransaction = () => {
-    const transactionData = {
-      description: formData.description,
-      amount: formData.type === 'income' ? +formData.amount : -(+formData.amount),
-      type: formData.type,
-      category: formData.category,
-      categoryIcon: formData.categoryIcon,
-      date: formData.date,
-      recurring: formData.recurring,
-      nextDueDate: formData.recurring ? formData.nextDueDate : undefined
-    };
+const handleSaveTransaction = () => {
+  // Gera ID recorrente se necessário
+  const recurringId = formData.recurring && !selectedTransaction?.recurringId
+    ? `rec_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`
+    : selectedTransaction?.recurringId;
 
-    if (selectedTransaction) {
-      // Editar transação existente
-      onEditTransaction?.(selectedTransaction.id, transactionData);
-    } else {
-      // Adicionar nova transação
-      onAddTransaction?.(transactionData);
-    }
+  // CORREÇÃO: Usa a data diretamente do formData (já está no formato YYYY-MM-DD)
+  const finalDate = formData.date; // Ex: "2025-10-20"
+
+  // Calcula próxima data se for recorrente
+  let nextDueDate: string | null = null;
+  if (formData.recurring) {
     
-    setIsModalOpen(false);
+    // --- INÍCIO DA CORREÇÃO ---
+    // O problema estava aqui: new Date(finalDate) criava uma data UTC.
+    // Precisamos criar uma data LOCAL para que os cálculos de dia (getDate)
+    // funcionem no fuso horário correto.
+
+    const [year, month, day] = finalDate.split('-').map(Number);
+    // month - 1 porque os meses em new Date() são base 0 (0=Jan, 11=Dez)
+    const next = new Date(year, month - 1, day); 
+    // Isso cria "2025-10-20 00:00:00" no fuso local (UTC-3)
+    // --- FIM DA CORREÇÃO ---
+
+    switch (formData.frequency) {
+      case 'weekly':
+        next.setDate(next.getDate() + 7); // Agora 20 + 7 = 27
+        break;
+      case 'monthly':
+        next.setMonth(next.getMonth() + 1);
+        break;
+      case 'yearly':
+        next.setFullYear(next.getFullYear() + 1);
+        break;
+    }
+    // Formata como YYYY-MM-DD sem problemas de timezone
+    // O resultado será "2025-10-27"
+    nextDueDate = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
+  }
+
+  const transactionData = {
+    description: formData.description,
+    amount: formData.amount,
+    type: formData.type,
+    category: formData.category,
+    categoryIcon: formData.categoryIcon,
+    date: finalDate, // O "2025-10-20" é enviado como string
+    recurring: formData.recurring,
+    recurringFrequency: formData.frequency || 'monthly',
+    recurringEndDate: formData.endDate || null,
+    recurringId: recurringId || null,
+    nextDueDate, // Agora corrigido para "2025-10-27"
+    isActive: true
   };
+
+  if (selectedTransaction) {
+    onEditTransaction?.(selectedTransaction.id, transactionData);
+  } else {
+    onAddTransaction?.(transactionData);
+  }
+
+  setIsModalOpen(false);
+};
+
 
   const handleConfirmDelete = () => {
     if (selectedTransaction) {

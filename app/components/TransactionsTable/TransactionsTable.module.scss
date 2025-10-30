@@ -682,7 +682,7 @@
   border: 1.5px solid var(--glass-border);
   border-radius: var(--radius-lg);
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   
   &::before {
     content: '';

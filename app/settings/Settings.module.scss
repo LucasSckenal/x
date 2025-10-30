@@ -8,6 +8,13 @@
   margin-bottom: 2rem;
 }
 
+.headerTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+}
+
 .title {
   font-size: 2rem;
   font-weight: 700;
@@ -18,6 +25,36 @@
 .subtitle {
   color: var(--muted);
   font-size: 1.1rem;
+}
+
+.connectionStatus {
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    
+    &.online {
+      background: color-mix(in srgb, var(--positive) 10%, transparent);
+      color: var(--positive);
+      border: 1px solid color-mix(in srgb, var(--positive) 30%, transparent);
+    }
+    
+    &.offline {
+      background: color-mix(in srgb, var(--warning) 10%, transparent);
+      color: var(--warning);
+      border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
+    }
+    
+    &:not(.online):not(.offline) {
+      background: color-mix(in srgb, var(--muted) 10%, transparent);
+      color: var(--muted);
+      border: 1px solid color-mix(in srgb, var(--muted) 30%, transparent);
+    }
+  }
 }
 
 .message {
@@ -39,6 +76,16 @@
     color: var(--negative);
     border: 1px solid color-mix(in srgb, var(--negative) 30%, transparent);
   }
+  
+  &.info {
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+    color: var(--accent);
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+}
+
+.messageContent {
+  flex: 1;
 }
 
 .closeMessage {
@@ -96,6 +143,16 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 1rem;
+  padding: 1rem;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid transparent;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--glass-border);
+  }
 }
 
 .toggleInfo {
@@ -116,57 +173,20 @@
   line-height: 1.4;
 }
 
-.toggle {
-  position: relative;
-  display: inline-block;
-  width: 50px;
-  height: 26px;
-  flex-shrink: 0;
-}
-
-.toggleInput {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.toggleSlider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: var(--border);
-  transition: .2s;
-  border-radius: 34px;
-  
-  &:before {
-    position: absolute;
-    content: "";
-    height: 18px;
-    width: 18px;
-    left: 4px;
-    bottom: 4px;
-    background-color: white;
-    transition: .2s;
-    border-radius: 50%;
-    box-shadow: 0 1px 3px var(--shadow);
-  }
-}
-
-.toggleInput:checked + .toggleSlider {
-  background-color: var(--accent);
-}
-
-.toggleInput:checked + .toggleSlider:before {
-  transform: translateX(24px);
-}
-
 .selectGroup {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  padding: 1rem;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid transparent;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--glass-border);
+  }
 }
 
 .selectLabel {
@@ -174,34 +194,137 @@
   color: var(--text);
 }
 
-.select {
-  padding: 0.75rem 1rem;
-  border: 2px solid var(--border);
-  border-radius: var(--radius);
-  font-size: 1rem;
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 2rem;
   background: var(--card);
-  color: var(--text);
-  transition: all 0.2s;
-  max-width: 300px;
-  cursor: pointer;
+  border-top: 1px solid var(--border);
+  margin-top: 2rem;
+  position: sticky;
+  bottom: 0;
+  background: color-mix(in srgb, var(--card) 95%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+.footerHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.unsavedIndicator {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  animation: slideInUp 0.3s ease;
+}
+
+.unsavedBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--warning);
+  font-weight: 600;
+  font-size: 0.9rem;
   
-  &:focus {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
-  }
-  
-  option {
-    background: var(--card);
-    color: var(--text);
+  svg {
+    color: var(--warning);
+    animation: pulse 2s infinite;
   }
 }
 
-.footer {
+.unsavedText {
+  color: var(--muted);
+  font-size: 0.875rem;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.savedIndicator {
   display: flex;
-  justify-content: flex-end;
-  padding-top: 2rem;
-  border-top: 2px solid var(--border);
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--positive);
+  font-weight: 500;
+  font-size: 0.9rem;
+  
+  svg {
+    color: var(--positive);
+  }
+}
+
+.footerActions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+.leftActions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  
+  @media (max-width: 480px) {
+    flex-direction: column;
+  }
+}
+
+.resetButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius);
+  font-weight: 500;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text);
+    border-color: var(--accent);
+    transform: translateY(-1px);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+.discardButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: transparent;
+  color: var(--negative);
+  border: 1px solid var(--negative);
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius);
+  font-weight: 500;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: color-mix(in srgb, var(--negative) 10%, transparent);
+    transform: translateY(-1px);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
 }
 
 .saveButton {
@@ -209,27 +332,121 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.75rem 2rem;
-  background: var(--accent);
-  color: white;
+  padding: 0.875rem 2rem;
   border: none;
   border-radius: var(--radius);
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
-  
-  &:hover:not(:disabled) {
-    background: var(--accent-600);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px var(--shadow);
-  }
+  transition: all 0.3s ease;
+  min-width: 160px;
+  position: relative;
+  overflow: hidden;
   
   &:disabled {
-    opacity: 0.6;
     cursor: not-allowed;
-    transform: none;
   }
+}
+
+.saveButtonActive {
+  background: linear-gradient(135deg, var(--accent), var(--accent-light));
+  color: white;
+  box-shadow: 0 4px 15px color-mix(in srgb, var(--accent) 30%, transparent);
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+  
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+}
+
+.saveButtonInactive {
+  background: var(--border);
+  color: var(--muted);
+  
+  &:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--border) 80%, black);
+  }
+}
+
+.saveBadge {
+  color: #ffd700;
+  font-weight: bold;
+  font-size: 1.5rem;
+  margin-left: 0.25rem;
+  animation: glow 1.5s ease-in-out infinite alternate;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+  
+  p {
+    color: var(--muted);
+    margin-top: 1rem;
+  }
+}
+
+.loadingSpinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border);
+  border-top: 3px solid var(--accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+// Animações
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes glow {
+  from {
+    text-shadow: 0 0 5px #ffd700;
+  }
+  to {
+    text-shadow: 0 0 10px #ffd700, 0 0 15px #ffed4e;
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 // Responsividade
@@ -248,7 +465,55 @@
     gap: 0.75rem;
   }
   
-  .toggle {
+  .footer {
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+  }
+  
+  .footerActions {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .leftActions {
+    width: 100%;
+    justify-content: stretch;
+    
+    button {
+      flex: 1;
+      justify-content: center;
+    }
+  }
+  
+  .saveButton {
+    width: 100%;
+    min-width: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .footer {
+    padding: 1.25rem;
+  }
+  
+  .leftActions {
+    flex-direction: column;
+    
+    button {
+      width: 100%;
+    }
+  }
+  
+  .unsavedText {
+    font-size: 0.8rem;
+  }
+  
+  .headerTop {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .connectionStatus {
     align-self: flex-start;
   }
 }

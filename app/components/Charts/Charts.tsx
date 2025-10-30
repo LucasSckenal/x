@@ -24,6 +24,7 @@ export default function Charts({ transactions }: ChartsProps) {
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
     sixMonthsAgo.setDate(1);
 
+    // Inicializa os 6 últimos meses
     for (let i = 0; i < 6; i++) {
       const date = new Date(sixMonthsAgo.getFullYear(), sixMonthsAgo.getMonth() + i, 1);
       const monthName = date.toLocaleString('pt-BR', { month: 'short' }).replace('.', '');
@@ -31,16 +32,30 @@ export default function Charts({ transactions }: ChartsProps) {
     }
 
     transactions.forEach((t) => {
-      if (t.date && typeof t.date.toDate === 'function') {
-        const transactionDate = t.date.toDate();
-        if (transactionDate >= sixMonthsAgo) {
-          const monthName = transactionDate.toLocaleString('pt-BR', { month: 'short' }).replace('.', '');
-          if (t.type === 'income') {
-            data[monthName].income += t.amount;
-          } else {
-            data[monthName].expense += t.amount;
-          }
-        }
+      let transactionDate: Date | null = null;
+
+      // Trata tanto Timestamp do Firestore quanto string ISO
+      if (t.date && typeof (t.date as any).toDate === 'function') {
+        transactionDate = (t.date as any).toDate();
+      } else if (typeof t.date === 'string') {
+        const parsed = new Date(t.date);
+        if (!isNaN(parsed.getTime())) transactionDate = parsed;
+      }
+
+      if (!transactionDate) return; // ignora transações inválidas
+      if (transactionDate < sixMonthsAgo) return; // ignora transações antigas
+
+      const monthName = transactionDate.toLocaleString('pt-BR', { month: 'short' }).replace('.', '');
+
+      // Garante que o mês existe no objeto, mesmo se estiver fora da lista inicial
+      if (!data[monthName]) {
+        data[monthName] = { income: 0, expense: 0 };
+      }
+
+      if (t.type === 'income') {
+        data[monthName].income += t.amount;
+      } else {
+        data[monthName].expense += t.amount;
       }
     });
 
@@ -61,7 +76,6 @@ export default function Charts({ transactions }: ChartsProps) {
             margin={{ top: 5, right: 20, left: -10, bottom: 5 }}
             barSize={30}
           >
-            {/* ---------- Degradês personalizados ---------- */}
             <defs>
               <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="var(--positive)" stopOpacity={0.9} />
@@ -101,7 +115,6 @@ export default function Charts({ transactions }: ChartsProps) {
               }}
             />
 
-            {/* ---------- Barras com degradê ---------- */}
             <Bar
               dataKey="Receitas"
               fill="url(#incomeGradient)"

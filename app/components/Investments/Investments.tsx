@@ -1,11 +1,11 @@
 'use client';
 
-// Imports de React (useState, useMemo, etc.)
+// Imports de React (useState, useReducer, etc.)
 import { useState, useReducer, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 
-// Ícones (MUDANÇA: Adicionei os ícones que faltavam)
+// Ícones
 import { 
   Plus, 
   Trash2, 
@@ -29,8 +29,12 @@ import {
   ArrowDownLeft, 
   Activity, 
   ChevronsUp, 
-  ChevronsDown
+  ChevronsDown,
+  Edit3,
+  PieChart
 } from 'lucide-react';
+
+import { getLast6Months } from "../../lib/getStockPrice";
 
 // Estilos
 import styles from './Investments.module.scss';
@@ -39,7 +43,7 @@ import styles from './Investments.module.scss';
 import CustomSelect from '../CustomSelect/CustomSelect';
 import CustomNumberInput from '../CustomNumberInput/CustomNumberInput';
 import Modal from '../Modal/Modal';
-import { User } from 'firebase/auth'; // Importamos apenas o TIPO
+import { User } from 'firebase/auth';
 
 // ===================================================================
 // --- TIPOS E INTERFACES ---
@@ -54,7 +58,6 @@ export interface Investment {
   userId?: string;
 }
 
-// *** MUDANÇA: Adicionada a interface do ficheiro original ***
 interface MonthlyPerformance {
   month: string;
   value: number;
@@ -67,6 +70,7 @@ interface InvestmentsProps {
   isLoading: boolean;
   user: User | null;
   onAddInvestment: (newInvestment: Omit<Investment, 'id'>) => Promise<void>;
+  onEditInvestment: (investmentId: string, updatedData: Partial<Investment>) => Promise<void>;
   onDeleteInvestment: (id: string) => Promise<void>;
   onRefreshData: () => void;
   isRefreshing: boolean;
@@ -79,6 +83,14 @@ interface PortfolioStats {
   returnPercentage: number;
   bestPerformer: Investment | null;
   worstPerformer: Investment | null;
+}
+
+interface PieChartData {
+  type: Investment['type'];
+  value: number;
+  percentage: number;
+  color: string;
+  count: number;
 }
 
 const investmentTypes = [
@@ -102,21 +114,18 @@ function formatPercentage(value: number) {
   return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
 }
 
-// *** MUDANÇA: Adicionada a função do ficheiro original ***
-// --- FUNÇÃO PARA SIMULAR DESEMPENHO MENSAL ---
 function generateMonthlyPerformance(investment: Investment): MonthlyPerformance[] {
   const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'];
   let currentValue = investment.value;
   
   return months.map((month, index) => {
-    // Simula diferentes taxas de retorno baseadas no tipo de investimento
     const baseRates: Record<string, number> = {
-      'Renda Fixa': 0.008, // 0.8% ao mês
-      'Ações': 0.012, // 1.2% ao mês
-      'Fundo Imobiliário': 0.009, // 0.9% ao mês
-      'ETF': 0.011, // 1.1% ao mês
-      'Cripto': 0.025, // 2.5% ao mês
-      'Outro': 0.006 // 0.6% ao mês
+      'Renda Fixa': 0.008,
+      'Ações': 0.012,
+      'Fundo Imobiliário': 0.009,
+      'ETF': 0.011,
+      'Cripto': 0.025,
+      'Outro': 0.006
     };
     
     const volatility: Record<string, number> = {
@@ -131,7 +140,6 @@ function generateMonthlyPerformance(investment: Investment): MonthlyPerformance[
     const baseRate = baseRates[investment.type] || 0.005;
     const vol = volatility[investment.type] || 0.05;
     
-    // Retorno mensal com alguma volatilidade
     const monthlyReturn = baseRate + (Math.random() - 0.5) * vol;
     const returnAmount = currentValue * monthlyReturn;
     
@@ -179,11 +187,14 @@ function StatCard({ title, value, subtitle, icon, trend, color }: any) {
 // --- COMPONENTES DE MODAL (Adicionar e Deletar) ---
 // ===================================================================
 function AddInvestmentModal({ isOpen, onClose, onAdd }: any) {
-  // ... (Componente igual)
   const [name, setName] = useState('');
   const [type, setType] = useState(investmentTypes[0].value);
   const [value, setValue] = useState(0);
   const [symbol, setSymbol] = useState('');
+
+  const handleTypeChange = (selectedValue: string) => {
+    setType(selectedValue);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,7 +206,7 @@ function AddInvestmentModal({ isOpen, onClose, onAdd }: any) {
     const newInvestment: Omit<Investment, 'id'> = {
       name,
       type: type as Investment['type'],
-      value,
+      value: Number(value),
       symbol: symbol || undefined,
     };
     
@@ -219,10 +230,9 @@ function AddInvestmentModal({ isOpen, onClose, onAdd }: any) {
           <div className={styles.formGroup}>
             <label>Tipo</label>
             <CustomSelect 
-              options={investmentTypes} 
-              value={investmentTypes.find(t => t.value === type)}
-              onChange={(option: any) => setType(option.value)}
-            />
+              options={investmentTypes}
+              value={type}
+              onChange={handleTypeChange} placeholder={''}            />
           </div>
           <div className={styles.formGroup}>
             <label>Símbolo (Opcional)</label>
@@ -238,7 +248,7 @@ function AddInvestmentModal({ isOpen, onClose, onAdd }: any) {
           <label>Valor Investido (R$)</label>
           <CustomNumberInput 
             value={value}
-            onValueChange={(val: number) => setValue(val)}
+            onChange={(val: number) => setValue(val)}
           />
         </div>
         <div className={styles.modalActions}>
@@ -251,9 +261,10 @@ function AddInvestmentModal({ isOpen, onClose, onAdd }: any) {
 }
 
 function ConfirmDeleteInvestmentModal({ isOpen, onClose, onConfirm, investment }: any) {
-  // ... (Componente igual)
   const handleConfirm = () => {
-    onConfirm(investment.id);
+    if (onConfirm && investment) {
+      onConfirm(investment.id);
+    }
     onClose();
   };
   
@@ -274,9 +285,8 @@ function ConfirmDeleteInvestmentModal({ isOpen, onClose, onConfirm, investment }
   );
 }
 
-
 // ===================================================================
-// --- COMPONENTE PRINCIPAL (Recebe Props) ---
+// --- COMPONENTE PRINCIPAL ---
 // ===================================================================
 export default function Investments({ 
   investments,
@@ -285,14 +295,16 @@ export default function Investments({
   onAddInvestment,
   onDeleteInvestment,
   onRefreshData,
+  onEditInvestment,
   isRefreshing
 }: InvestmentsProps) {
   
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  
-  // *** MUDANÇA: Adicionado o estado para o modal de detalhes ***
   const [selectedInvestment, setSelectedInvestment] = useState<Investment | null>(null);
+  const [viewMode, setViewMode] = useState<'reports' | 'chart'>('reports');
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingInvestment, setEditingInvestment] = useState<Investment | null>(null);
 
   const handleAddInvestment = async (newInvestment: Omit<Investment, 'id'>) => {
     try {
@@ -304,6 +316,26 @@ export default function Investments({
       toast.error('Erro ao adicionar investimento');
     }
   };
+
+  const handleEditInvestment = async (id: string, updatedInvestment: Omit<Investment, 'id'>) => {
+  try {
+    // Convertemos Omit<Investment, 'id'> para Partial<Investment>
+    const updatedData: Partial<Investment> = {
+      name: updatedInvestment.name,
+      type: updatedInvestment.type,
+      value: updatedInvestment.value,
+      symbol: updatedInvestment.symbol,
+    };
+    
+    await onEditInvestment(id, updatedData);
+    toast.success('Investimento atualizado!');
+    setIsEditModalOpen(false);
+    setEditingInvestment(null);
+  } catch (error) {
+    console.error('Erro ao editar investimento:', error);
+    toast.error('Erro ao editar investimento');
+  }
+};
 
   const handleDeleteInvestment = async (id: string) => {
     try {
@@ -322,12 +354,121 @@ export default function Investments({
     setIsDeleteModalOpen(true);
   };
   
-  // *** MUDANÇA: Adicionado o handler para o clique no item ***
   const handleInvestmentClick = (investment: Investment) => {
     setSelectedInvestment(investment);
   };
 
-  // Cálculos do portfólio (igual)
+  const openEditModal = (investment: Investment, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingInvestment(investment);
+    setIsEditModalOpen(true);
+  };
+
+  // Componente de Performance em Tempo Real
+  function RealTimePerformance({ symbol, currentValue }: { symbol: string, currentValue: number }) {
+    const [performance, setPerformance] = useState<{ 
+      change: number; 
+      changePercent: number; 
+      currentPrice: number;
+      isRealData: boolean;
+    } | null>(null);
+    
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+      const fetchPerformanceData = async () => {
+        try {
+          setLoading(true);
+          const monthlyData = await getLast6Months(symbol);
+          
+          if (monthlyData.length >= 2) {
+            const firstMonth = monthlyData[0];
+            const lastMonth = monthlyData[monthlyData.length - 1];
+            
+            const change = lastMonth.value - firstMonth.value;
+            const changePercent = (change / firstMonth.value) * 100;
+
+            setPerformance({
+              change: Number(change.toFixed(2)),
+              changePercent: Number(changePercent.toFixed(2)),
+              currentPrice: lastMonth.value,
+              isRealData: true
+            });
+          } else {
+            const conservativeChange = (Math.random() * 0.1 - 0.02) * currentValue;
+            const conservativeChangePercent = (conservativeChange / currentValue) * 100;
+            
+            setPerformance({
+              change: Number(conservativeChange.toFixed(2)),
+              changePercent: Number(conservativeChangePercent.toFixed(2)),
+              currentPrice: currentValue + conservativeChange,
+              isRealData: false
+            });
+          }
+        } catch (error) {
+          console.error('Erro ao calcular performance:', error);
+          const fallbackChange = (Math.random() * 0.08 - 0.02) * currentValue;
+          const fallbackChangePercent = (fallbackChange / currentValue) * 100;
+          
+          setPerformance({
+            change: Number(fallbackChange.toFixed(2)),
+            changePercent: Number(fallbackChangePercent.toFixed(2)),
+            currentPrice: currentValue + fallbackChange,
+            isRealData: false
+          });
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      fetchPerformanceData();
+      const interval = setInterval(fetchPerformanceData, 300000);
+      return () => clearInterval(interval);
+    }, [symbol, currentValue]);
+
+    if (loading) {
+      return (
+        <div className={styles.performanceBadge}>
+          <RefreshCw size={12} className={styles.refreshing} />
+          <span>Carregando...</span>
+        </div>
+      );
+    }
+
+    if (!performance) {
+      return (
+        <div className={styles.performanceBadge}>
+          <AlertTriangle size={12} />
+          <span>Sem dados</span>
+        </div>
+      );
+    }
+
+    const isPositive = performance.change >= 0;
+
+    return (
+      <div className={styles.realTimePerformance}>
+        <div 
+          className={`${styles.performanceBadge} ${isPositive ? styles.positive : styles.negative} ${
+            !performance.isRealData ? styles.simulated : ''
+          }`}
+          title={performance.isRealData ? "Dados reais" : "Dados simulados"}
+        >
+          {isPositive ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+          <span>{performance.changePercent.toFixed(2)}%</span>
+          {!performance.isRealData && <span className={styles.simulatedIndicator}>*</span>}
+        </div>
+
+        {performance.isRealData && (
+          <div className={styles.currentPrice}>
+            <small>Cota: {formatCurrency(performance.currentPrice)}</small>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Cálculos do portfólio
   const portfolioStats = useMemo((): PortfolioStats => {
     const totalValue = investments.reduce((sum, inv) => sum + inv.value, 0);
     const totalInvested = investments.reduce((sum, inv) => sum + inv.value, 0);
@@ -350,7 +491,401 @@ export default function Investments({
     };
   }, [investments]);
 
-  // Funções de UI (iguais)
+  // Função para obter cores dos tipos
+  const getTypeColor = (type: Investment['type']) => {
+    switch (type) {
+      case 'Renda Fixa': return '#34d399';
+      case 'Ações': return '#60a5fa';
+      case 'Fundo Imobiliário': return '#fbbf24';
+      case 'ETF': return '#a78bfa';
+      case 'Cripto': return '#f87171';
+      default: return '#6b7280';
+    }
+  };
+
+  function EditInvestmentModal({ isOpen, onClose, onEdit, investment }: any) {
+  const [name, setName] = useState(investment?.name || '');
+  const [type, setType] = useState(investment?.type || investmentTypes[0].value);
+  const [value, setValue] = useState(investment?.value || 0);
+  const [symbol, setSymbol] = useState(investment?.symbol || '');
+
+  useEffect(() => {
+    if (investment) {
+      setName(investment.name);
+      setType(investment.type);
+      setValue(investment.value);
+      setSymbol(investment.symbol || '');
+    }
+  }, [investment]);
+
+  const handleTypeChange = (selectedValue: string) => {
+    setType(selectedValue);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || value <= 0) {
+      toast.error('Preencha o nome e um valor válido.');
+      return;
+    }
+    
+    const updatedInvestment: Omit<Investment, 'id'> = {
+      name,
+      type: type as Investment['type'],
+      value: Number(value),
+      symbol: symbol || undefined,
+    };
+    
+    onEdit(investment.id, updatedInvestment);
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Editar Investimento">
+      <form onSubmit={handleSubmit} className={styles.modalForm}>
+        {/* Mesmo conteúdo do modal de adicionar, mas com valores pré-preenchidos */}
+        <div className={styles.formGroup}>
+          <label>Nome do Ativo</label>
+          <input 
+            type="text" 
+            value={name} 
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Ex: Tesouro Selic 2029" 
+            required
+          />
+        </div>
+        <div className={styles.formRow}>
+          <div className={styles.formGroup}>
+            <label>Tipo</label>
+            <CustomSelect 
+              options={investmentTypes} 
+              value={type}
+              onChange={handleTypeChange}
+            />
+          </div>
+          <div className={styles.formGroup}>
+            <label>Símbolo (Opcional)</label>
+            <input 
+              type="text" 
+              value={symbol} 
+              onChange={(e) => setSymbol(e.target.value)}
+              placeholder="Ex: AAPL" 
+            />
+          </div>
+        </div>
+        <div className={styles.formGroup}>
+          <label>Valor Investido (R$)</label>
+          <CustomNumberInput 
+            value={value}
+            onChange={(val: number) => setValue(val)}
+          />
+        </div>
+        <div className={styles.modalActions}>
+          <motion.button type="button" onClick={onClose} className={styles.cancelButton} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>Cancelar</motion.button>
+          <motion.button type="submit" className={styles.saveButton} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>Salvar Alterações</motion.button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+// ===================================================================
+// --- COMPONENTE DO GRÁFICO DE DONUT CORRIGIDO ---
+// ===================================================================
+const PortfolioDonutChart = ({ investments }: { investments: Investment[] }) => {
+  // Estado de interação
+  const [hoveredSlice, setHoveredSlice] = useState<string | null>(null);
+  const [selectedSlice, setSelectedSlice] = useState<string | null>(null);
+  const [tooltip, setTooltip] = useState<{ left: number; top: number; title: string; value: string; percent: string } | null>(null);
+
+  // Portfolio stats
+  const portfolioStats = useMemo((): PortfolioStats => {
+    const totalValue = investments.reduce((sum, inv) => sum + inv.value, 0);
+    const totalInvested = totalValue;
+    const totalReturn = 0;
+    const returnPercentage = 0;
+    const bestPerformer = investments.length > 0 ? investments.reduce((best, current) => current.value > best.value ? current : best, investments[0]) : null;
+    const worstPerformer = investments.length > 0 ? investments.reduce((worst, current) => current.value < worst.value ? current : worst, investments[0]) : null;
+    return { totalValue, totalInvested, totalReturn, returnPercentage, bestPerformer, worstPerformer };
+  }, [investments]);
+
+  // Dados agregados por tipo
+  const donutData = useMemo(() => {
+    const typeTotals: Record<string, { value: number; count: number }> = {};
+    investments.forEach(inv => {
+      const t = inv.type;
+      if (!typeTotals[t]) typeTotals[t] = { value: 0, count: 0 };
+      typeTotals[t].value += inv.value;
+      typeTotals[t].count += 1;
+    });
+
+    const typeColors: Record<string, string> = {
+      'Renda Fixa': '#10b981',
+      'Ações': '#3b82f6',
+      'Fundo Imobiliário': '#f59e0b',
+      'ETF': '#8b5cf6',
+      'Cripto': '#ef4444',
+      'Outro': '#6b7280'
+    };
+
+    const typeGradients: Record<string, [string, string]> = {
+      'Renda Fixa': ['#0ea5a4', '#34d399'],
+      'Ações': ['#2563eb', '#60a5fa'],
+      'Fundo Imobiliário': ['#d97706', '#fbbf24'],
+      'ETF': ['#7c3aed', '#a78bfa'],
+      'Cripto': ['#dc2626', '#f87171'],
+      'Outro': ['#374151', '#9ca3af']
+    };
+
+    const total = Object.values(typeTotals).reduce((s, v) => s + v.value, 0) || 1;
+
+    return Object.entries(typeTotals).map(([type, data]) => ({
+      type,
+      value: data.value,
+      percentage: (data.value / total) * 100,
+      color: typeColors[type] || '#6b7280',
+      gradient: typeGradients[type] || ['#6b7280', '#9ca3af'],
+      count: data.count,
+      icon: getInvestmentIcon(type as Investment['type'])
+    })).sort((a, b) => b.value - a.value);
+  }, [investments]);
+
+  // Cálculo de ângulos e paths
+  const DONUT_SIZE = 240;
+  const CX = DONUT_SIZE / 2;
+  const CY = DONUT_SIZE / 2;
+  const OUTER = 86;
+  const INNER = 52;
+
+  const polarToCartesian = (cx: number, cy: number, r: number, angle: number) => {
+    const a = (angle - 90) * Math.PI / 180;
+    return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
+  };
+
+  const describeArc = (startAngle: number, endAngle: number) => {
+    const start = polarToCartesian(CX, CY, OUTER, endAngle);
+    const end = polarToCartesian(CX, CY, OUTER, startAngle);
+    const startInner = polarToCartesian(CX, CY, INNER, endAngle);
+    const endInner = polarToCartesian(CX, CY, INNER, startAngle);
+    const largeArc = endAngle - startAngle <= 180 ? 0 : 1;
+    return `M ${start.x} ${start.y} A ${OUTER} ${OUTER} 0 ${largeArc} 0 ${end.x} ${end.y} L ${endInner.x} ${endInner.y} A ${INNER} ${INNER} 0 ${largeArc} 1 ${startInner.x} ${startInner.y} Z`;
+  };
+
+  // Build slices with angles
+  let angleCursor = 0;
+  const slices = donutData.map(d => {
+    const sliceAngle = (d.percentage / 100) * 360;
+    const slice = {
+      ...d,
+      startAngle: angleCursor,
+      endAngle: angleCursor + sliceAngle,
+      midAngle: angleCursor + sliceAngle / 2
+    };
+    angleCursor += sliceAngle;
+    return slice;
+  });
+
+  const handleMouseMove = (e: React.MouseEvent, sliceType: string | null, slice?: any) => {
+    const rect = (e.target as Element).closest('svg')?.getBoundingClientRect();
+    const left = rect ? e.clientX - rect.left : 0;
+    const top = rect ? e.clientY - rect.top : 0;
+    if (sliceType && slice) {
+      setTooltip({
+        left,
+        top,
+        title: slice.type,
+        value: formatCurrency(slice.value),
+        percent: `${slice.percentage.toFixed(1)}%`
+      });
+    } else {
+      setTooltip(null);
+    }
+  };
+
+  // Center display: mostra total (padrão) e dados da fatia no hover/seleção
+  const centerTitle = selectedSlice ? selectedSlice : (hoveredSlice ? hoveredSlice : 'Total Investido');
+  const centerValue = (() => {
+    const slice = slices.find(s => s.type === (selectedSlice || hoveredSlice));
+    if (slice) return `${formatCurrency(slice.value)} • ${slice.percentage.toFixed(1)}%`;
+    return formatCurrency(portfolioStats.totalValue);
+  })();
+
+  // Transform para "explodir" a fatia ao hover
+  const getTransformForMidAngle = (midAngle: number, dist = 8) => {
+    const r = (midAngle - 90) * Math.PI / 180;
+    return `translate(${Math.cos(r) * dist}px, ${Math.sin(r) * dist}px)`;
+  };
+
+  return (
+    <div className={styles.donutChartCard}>
+      <div className={styles.donutChartHeader}>
+        <div className={styles.headerMain}>
+          <h3>Distribuição da Carteira</h3>
+          <div className={styles.headerStats}>
+            <span className={styles.statPill}>{investments.length} {investments.length === 1 ? 'ativo' : 'ativos'}</span>
+            <span className={styles.statPill}>{formatCurrency(portfolioStats.totalValue)}</span>
+          </div>
+        </div>
+        <PieChart size={20} className={styles.chartIcon} />
+      </div>
+
+      <div className={styles.donutChartContainer}>
+        <div className={styles.donutChartSvg}>
+          <svg width={DONUT_SIZE} height={DONUT_SIZE} viewBox={`0 0 ${DONUT_SIZE} ${DONUT_SIZE}`} className={styles.donutSvg}>
+            <defs>
+              {slices.map((s, i) => (
+                <linearGradient id={`g-${i}`} key={s.type} x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor={s.gradient ? s.gradient[0] : s.color} />
+                  <stop offset="100%" stopColor={s.gradient ? s.gradient[1] : s.color} />
+                </linearGradient>
+              ))}
+              <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur" />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+
+            {/* circle shadow background */}
+            <circle cx={CX} cy={CY} r={OUTER + 6} fill="rgba(0,0,0,0.18)" />
+
+            {/* base ring (subtle) */}
+            <circle cx={CX} cy={CY} r={OUTER} fill="none" stroke="rgba(255,255,255,0.02)" strokeWidth="6" />
+
+            {/* slices */}
+            {slices.map((slice, idx) => {
+              const path = describeArc(slice.startAngle, slice.endAngle);
+              const isHovered = hoveredSlice === slice.type;
+              const isSelected = selectedSlice === slice.type;
+              const transform = isHovered || isSelected ? getTransformForMidAngle(slice.midAngle, 10) : 'translate(0,0)';
+              return (
+                <motion.path
+                  key={slice.type}
+                  d={path}
+                  fill={`url(#g-${idx})`}
+                  stroke="rgba(255,255,255,0.04)"
+                  strokeWidth={1}
+                  className={styles.donutSlice}
+                  style={{
+                    transform,
+                    transformOrigin: `${CX}px ${CY}px`,
+                    cursor: 'pointer',
+                    opacity: selectedSlice && !isSelected ? 0.45 : 1
+                  }}
+                  whileHover={{ scale: 1.02 }}
+                  initial={{ opacity: 0, pathLength: 0 }}
+                  animate={{ opacity: 1, pathLength: 1 }}
+                  transition={{ duration: 0.6, delay: idx * 0.06, type: 'spring', stiffness: 90 }}
+                  onMouseEnter={(e) => { setHoveredSlice(slice.type); handleMouseMove(e, slice.type, slice); }}
+                  onMouseMove={(e) => handleMouseMove(e, slice.type, slice)}
+                  onMouseLeave={() => { setHoveredSlice(null); setTooltip(null); }}
+                  onClick={() => setSelectedSlice(selectedSlice === slice.type ? null : slice.type)}
+                  filter={isHovered ? "url(#glow)" : undefined}
+                />
+              );
+            })}
+
+            {/* donut center - ring to create inner hole */}
+            <circle cx={CX} cy={CY} r={INNER} fill="rgba(0,0,0,0.45)" stroke="rgba(255,255,255,0.02)" strokeWidth="1" />
+
+            {/* centro texto */}
+            <g className={styles.donutCenterGroup}>
+              <text x={CX} y={CY - 6} textAnchor="middle" className={styles.donutCenterLabel} style={{ fill: 'var(--text-muted)' }}>{centerTitle}</text>
+              <text x={CX} y={CY + 16} textAnchor="middle" className={styles.donutCenterValue} style={{ fill: 'var(--text)' }}>{centerValue}</text>
+            </g>
+          </svg>
+
+          {/* tooltip flutuante */}
+          {tooltip && (
+            <div
+              className={styles.donutTooltip}
+              style={{ left: tooltip.left + 12, top: tooltip.top - 12 }}
+            >
+              <div className={styles.tooltipTitle}>{tooltip.title}</div>
+              <div className={styles.tooltipValue}>{tooltip.value}</div>
+              <div className={styles.tooltipPercent}>{tooltip.percent}</div>
+            </div>
+          )}
+        </div>
+
+        {/* legenda */}
+        <div className={styles.donutLegend}>
+          <div className={styles.legendHeader}>
+            <h4>Tipos de Investimento</h4>
+            <div className={styles.legendStats}>
+              <span>{slices.length} categorias</span>
+            </div>
+          </div>
+
+          <div className={styles.legendList}>
+            {slices.map((s) => {
+              const isActive = hoveredSlice === s.type || selectedSlice === s.type;
+              return (
+                <motion.div
+                  key={s.type}
+                  className={`${styles.legendItem} ${isActive ? styles.legendItemActive : ''}`}
+                  onMouseEnter={() => setHoveredSlice(s.type)}
+                  onMouseLeave={() => setHoveredSlice(null)}
+                  onClick={() => setSelectedSlice(selectedSlice === s.type ? null : s.type)}
+                  whileHover={{ x: 6 }}
+                >
+                  <div className={styles.legendColor} style={{ background: `linear-gradient(90deg, ${s.gradient?.[0] || s.color}, ${s.gradient?.[1] || s.color})`}} />
+                  <div className={styles.legendMain}>
+                    <div className={styles.legendTitle}>
+                      <span className={styles.legendType}>{s.type}</span>
+                      <span className={styles.legendPct}>{s.percentage.toFixed(1)}%</span>
+                    </div>
+                    <div className={styles.legendMeta}>
+                      <span className={styles.legendCount}>{s.count} {s.count === 1 ? 'ativo' : 'ativos'}</span>
+                      <strong className={styles.legendValue}>{formatCurrency(s.value)}</strong>
+                    </div>
+
+                    <div className={styles.legendBar}>
+                      <motion.div className={styles.legendBarFill} style={{ background: s.color }} initial={{ width: 0 }} animate={{ width: `${s.percentage}%` }} transition={{ duration: 0.9, ease: 'easeOut' }} />
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* resumo */}
+      <div className={styles.donutSummary}>
+        <div className={styles.summaryCard}>
+          <div className={styles.summaryIcon}><Target size={18} /></div>
+          <div className={styles.summaryContent}>
+            <span>Maior Categoria</span>
+            <strong>{donutData[0]?.type || 'N/A'}</strong>
+            <small>{donutData[0]?.percentage ? `${donutData[0].percentage.toFixed(1)}%` : '—'}</small>
+          </div>
+        </div>
+
+        <div className={styles.summaryCard}>
+          <div className={styles.summaryIcon}><TrendingUp size={18} /></div>
+          <div className={styles.summaryContent}>
+            <span>Diversificação</span>
+            <strong>{donutData.length} categorias</strong>
+            <small>Mais equilíbrio = menor risco</small>
+          </div>
+        </div>
+
+        <div className={styles.summaryCard}>
+          <div className={styles.summaryIcon}><Package size={18} /></div>
+          <div className={styles.summaryContent}>
+            <span>Menor Categoria</span>
+            <strong>{donutData[donutData.length - 1]?.type || 'N/A'}</strong>
+            <small>{donutData[donutData.length - 1]?.percentage ? `${donutData[donutData.length - 1].percentage.toFixed(1)}%` : '—'}</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+  // Funções de UI
   const getInvestmentIcon = (type: Investment['type']) => {
     switch (type) {
       case 'Renda Fixa': return <Landmark size={20} />;
@@ -362,22 +897,10 @@ export default function Investments({
     }
   };
 
-  const getTypeColor = (type: Investment['type']) => {
-    switch (type) {
-      case 'Renda Fixa': return '#34d399';
-      case 'Ações': return '#60a5fa';
-      case 'Fundo Imobiliário': return '#fbbf24';
-      case 'ETF': return '#a78bfa';
-      case 'Cripto': return '#f87171';
-      default: return 'var(--muted)';
-    }
-  };
-
-
   return (
     <>
       <div className={styles.container}>
-        {/* Header (igual) */}
+        {/* Header com Toggle */}
         <div className={styles.header}>
           <div className={styles.headerTitle}>
             <motion.div
@@ -397,6 +920,24 @@ export default function Investments({
           </div>
           
           <div className={styles.headerActions}>
+            {/* Toggle para alternar entre relatórios e gráfico */}
+            <div className={styles.viewToggle}>
+              <button 
+                className={`${styles.toggleButton} ${viewMode === 'reports' ? styles.activeToggle : ''}`}
+                onClick={() => setViewMode('reports')}
+              >
+                <Wallet size={16} />
+                <span>Relatórios</span>
+              </button>
+              <button 
+                className={`${styles.toggleButton} ${viewMode === 'chart' ? styles.activeToggle : ''}`}
+                onClick={() => setViewMode('chart')}
+              >
+                <PieChart size={16} />
+                <span>Distribuição</span>
+              </button>
+            </div>
+
             <motion.button 
               className={styles.refreshButton}
               onClick={onRefreshData}
@@ -419,35 +960,44 @@ export default function Investments({
           </div>
         </div>
 
-        {/* Cartões de Estatísticas (igual) */}
-        <div className={styles.statsGrid}>
-          <StatCard
-            title="Valor Total"
-            value={formatCurrency(portfolioStats.totalValue)}
-            subtitle="Patrimônio atual"
-            icon={<Wallet size={20} />}
-            trend={portfolioStats.returnPercentage}
-            color="var(--accent)"
-          />
-          
-          <StatCard
-            title="Total Investido"
-            value={formatCurrency(portfolioStats.totalInvested)}
-            subtitle="Valor aplicado"
-            icon={<TrendingUp size={20} />}
-            color="#3b82f6"
-          />
-          
-          <StatCard
-            title="Melhor Performance"
-            value={portfolioStats.bestPerformer ? portfolioStats.bestPerformer.name : 'N/A'}
-            subtitle={portfolioStats.bestPerformer ? formatCurrency(portfolioStats.bestPerformer.value) : ''}
-            icon={<Target size={20} />}
-            color={portfolioStats.bestPerformer ? getTypeColor(portfolioStats.bestPerformer.type) : 'var(--muted)'}
-          />
-        </div>
+        {/* Renderização condicional baseada no viewMode */}
+        {viewMode === 'reports' ? (
+          <>
+            {/* Cartões de Estatísticas (modo relatórios) */}
+            <div className={styles.statsGrid}>
+              <StatCard
+                title="Valor Total"
+                value={formatCurrency(portfolioStats.totalValue)}
+                subtitle="Patrimônio atual"
+                icon={<Wallet size={20} />}
+                color="var(--accent)"
+              />
+              
+              <StatCard
+                title="Total Investido"
+                value={formatCurrency(portfolioStats.totalInvested)}
+                subtitle="Valor aplicado"
+                icon={<TrendingUp size={20} />}
+                color="#3b82f6"
+              />
+              
+              <StatCard
+                title="Melhor Performance"
+                value={portfolioStats.bestPerformer ? portfolioStats.bestPerformer.name : 'N/A'}
+                subtitle={portfolioStats.bestPerformer ? formatCurrency(portfolioStats.bestPerformer.value) : ''}
+                icon={<Target size={20} />}
+                color={portfolioStats.bestPerformer ? getTypeColor(portfolioStats.bestPerformer.type) : 'var(--muted)'}
+              />
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Gráfico de Pizza (modo distribuição) */}
+            <PortfolioDonutChart investments={investments} />
+          </>
+        )}
 
-        {/* Lista de Investimentos */}
+        {/* Lista de Investimentos (sempre visível) */}
         <div className={styles.investmentList}>
           {isLoading ? (
             <div className={styles.loadingState}>
@@ -490,7 +1040,6 @@ export default function Investments({
                   exit={{ opacity: 0, x: -50 }}
                   transition={{ duration: 0.3, delay: index * 0.1 }}
                   whileHover={{ scale: 1.02, zIndex: 1 }}
-                  // *** MUDANÇA: Adicionado o onClick para abrir o modal de detalhes ***
                   onClick={() => handleInvestmentClick(investment)}
                 >
                   <div 
@@ -518,22 +1067,33 @@ export default function Investments({
                       <strong className={styles.value}>
                         {formatCurrency(investment.value)}
                       </strong>
-                      {user && (
-                        <div className={styles.performanceBadge}>
-                          <TrendingUp size={12} />
-                          <span>Salvo na nuvem</span>
-                        </div>
+                      {user && investment.symbol && (
+                        <RealTimePerformance 
+                          symbol={investment.symbol}
+                          currentValue={investment.value}
+                        />
                       )}
                     </div>
                     
-                    <motion.button 
-                      className={styles.deleteButton} 
-                      onClick={(e) => openDeleteModal(investment, e)}
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                    >
-                      <Trash2 size={16} />
+                    <div className={styles.actions}>
+                      <motion.button 
+                        className={styles.editButton} 
+                        onClick={(e) => openEditModal(investment, e)}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                      >
+                        <Edit3 size={16} />
+                      </motion.button>
+                      
+                      <motion.button 
+                        className={styles.deleteButton} 
+                        onClick={(e) => openDeleteModal(investment, e)}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                      >
+                        <Trash2 size={16} />
                     </motion.button>
+                  </div>
                   </div>
                 </motion.div>
               ))}
@@ -542,7 +1102,7 @@ export default function Investments({
         </div>
       </div>
 
-      {/* Modais (Adicionar e Deletar) */}
+      {/* Modais */}
       <AddInvestmentModal 
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
@@ -556,20 +1116,28 @@ export default function Investments({
         investment={selectedInvestment}
       />
       
-      {/* *** MUDANÇA: Adicionado o Modal de Detalhes *** */}
       <InvestmentDetailsModal 
-        isOpen={!!selectedInvestment && !isDeleteModalOpen} // Só abre se não for o modal de delete
+        isOpen={!!selectedInvestment && !isDeleteModalOpen}
         onClose={() => setSelectedInvestment(null)} 
         investment={selectedInvestment} 
-        formatCurrency={formatCurrency} // Passa a função utilitária
+        formatCurrency={formatCurrency}
+      />
+
+      <EditInvestmentModal 
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingInvestment(null);
+        }}
+        onEdit={handleEditInvestment}
+        investment={editingInvestment}
       />
     </>
   );
 }
 
-
 // ===================================================================
-// --- MODAL DE DETALHES DO INVESTIMENTO (DO SEU 1º FICHEIRO) ---
+// --- MODAL DE DETALHES DO INVESTIMENTO ---
 // ===================================================================
 function InvestmentDetailsModal({ isOpen, onClose, investment, formatCurrency }: any) {
   const [performanceData, setPerformanceData] = useState<MonthlyPerformance[]>([]);
@@ -582,27 +1150,42 @@ function InvestmentDetailsModal({ isOpen, onClose, investment, formatCurrency }:
   const SVG_VIEWBOX_WIDTH = 200;
   const SVG_VIEWBOX_HEIGHT = 100;
   const SVG_PADDING = 10; 
-  const GRAPH_WIDTH = SVG_VIEWBOX_WIDTH - (SVG_PADDING * 2); // 180
-  const GRAPH_START_X = SVG_PADDING; // 10
-  const GRAPH_END_X = SVG_VIEWBOX_WIDTH - SVG_PADDING; // 190
+  const GRAPH_WIDTH = SVG_VIEWBOX_WIDTH - (SVG_PADDING * 2);
+  const GRAPH_START_X = SVG_PADDING;
+  const GRAPH_END_X = SVG_VIEWBOX_WIDTH - SVG_PADDING;
   
   useEffect(() => {
-    if (investment) {
-      setIsLoading(true);
-      const timer = setTimeout(() => {
-        const data = generateMonthlyPerformance(investment); // Usa a função de simulação
-        setPerformanceData(data);
-        setIsLoading(false);
-      }, 800);
-      
-      return () => clearTimeout(timer);
+    if (!investment) return;
+
+    setIsLoading(true);
+
+    if (investment.symbol) {
+      getLast6Months(investment.symbol)
+        .then((data) => {
+          if (data && data.length > 0) {
+            setPerformanceData(data.map((d) => ({
+              month: d.month,
+              value: d.value,
+              return: 0,
+              returnPercentage: 0,
+            })));
+          } else {
+            setPerformanceData(generateMonthlyPerformance(investment));
+          }
+        })
+        .catch((err) => {
+          console.warn("Erro ao buscar dados reais:", err);
+          setPerformanceData(generateMonthlyPerformance(investment));
+        })
+        .finally(() => setIsLoading(false));
     } else {
-      setPerformanceData([]);
+      const simulated = generateMonthlyPerformance(investment);
+      setPerformanceData(simulated);
       setIsLoading(false);
     }
   }, [investment]);
 
-  // Cálculos de métricas (do seu 1º ficheiro)
+  // Cálculos de métricas
   const totalReturn = performanceData.length > 0 ? performanceData.reduce((sum, month) => sum + month.return, 0) : 0;
   const totalReturnPercentage = investment && performanceData.length > 0 ? (totalReturn / investment.value) * 100 : 0;
   const averageMonthlyReturn = performanceData.length > 0 ? performanceData.reduce((sum, month) => sum + month.returnPercentage, 0) / performanceData.length : 0;
@@ -613,7 +1196,7 @@ function InvestmentDetailsModal({ isOpen, onClose, investment, formatCurrency }:
   const bestMonth = performanceData.length > 0 ? performanceData.reduce((best, current) => current.returnPercentage > best.returnPercentage ? current : best, performanceData[0]) : null;
   const worstMonth = performanceData.length > 0 ? performanceData.reduce((worst, current) => current.returnPercentage < worst.returnPercentage ? current : worst, performanceData[0]) : null;
 
-  // Funções de cálculo do gráfico (do seu 1º ficheiro)
+  // Funções de cálculo do gráfico
   const calculateSmoothLinePoints = useCallback(() => {
     if (performanceData.length === 0) return '';
     const points = performanceData.map((month, index) => {
@@ -707,7 +1290,15 @@ function InvestmentDetailsModal({ isOpen, onClose, investment, formatCurrency }:
                 <div className={styles.lineChart}>
                   <div className={styles.yAxis}>
                     {gridLines.map((line, index) => (
-                      <div key={index} className={styles.yTick} style={{ bottom: `${line.y}%` }}>
+                      <div 
+                        key={index} 
+                        className={styles.yTick} 
+                        style={{ 
+                          // CORREÇÃO: Posiciona de cima para baixo (valores maiores em cima)
+                          top: `${line.y}%`,
+                          transform: 'translateY(-50%)' // Centraliza verticalmente
+                        }}
+                      >
                         <span className={styles.yLabel}>{line.label}</span>
                         <div className={styles.gridLine} />
                       </div>
@@ -842,15 +1433,10 @@ function InvestmentDetailsModal({ isOpen, onClose, investment, formatCurrency }:
                   
                   <div className={styles.xAxis}>
                     {performanceData.map((month, index) => {
-                        // --- CORREÇÃO CONTRA DIVISÃO POR ZERO ---
                         const numPoints = performanceData.length;
                         const divisor = numPoints > 1 ? numPoints - 1 : 1;
-                        
-                        // Se houver mais de 1 ponto, calcula a % normal. Se houver só 1, coloca-o a 50%.
                         const xPercentBase = numPoints > 1 ? (index / divisor) : 0.5;
-
-                        // A fórmula para "left" agora usa a base segura
-                        const leftPercent = (xPercentBase * (GRAPH_WIDTH / SVG_VIEWBOX_WIDTH) * 100) + (GRAPH_START_X / SVG_VIEWBOX_WIDTH * 100);
+                        const leftPercent = (xPercentBase * 100);
 
                         return (
                           <div 
@@ -858,12 +1444,9 @@ function InvestmentDetailsModal({ isOpen, onClose, investment, formatCurrency }:
                             className={styles.xTick}
                             style={{ 
                               left: `${leftPercent}%`,
-                              // Se houver só 1 ponto, ajusta a transformação para centrar
-                              transform: `translateX(${numPoints === 1 ? '0%' : '-50%'})` 
+                              transform: `translateX(-50%)`
                             }}
                           >
-                            <span className={styles.xLabel}>{month.month}</span>
-                            <div className={styles.xMarker} style={{ backgroundColor: hoveredPoint === index ? (isPositiveTrend ? '#16a34a' : '#dc2626') : 'var(--muted)' }} />
                           </div>
                         );
                       })}
@@ -887,51 +1470,52 @@ function InvestmentDetailsModal({ isOpen, onClose, investment, formatCurrency }:
         )}
 
         {activeTab === 'table' && (
-  <div className={styles.performanceTable}>
-    <h4>Performance Mensal Detalhada</h4>
-    <div className={styles.tableContainer}>
-      {isLoading ? ( 
-        <div className={styles.loadingState}><p>Carregando dados...</p></div> 
-      ) : 
-      performanceData.length > 0 ? (
-        <table className={styles.performanceTableTable}>
-          <thead>
-            <tr>
-              <th className={styles.performanceTableHead}>Mês</th>
-              <th className={styles.performanceTableHead}>Valor Acumulado</th>
-              <th className={styles.performanceTableHead}>Retorno (R$)</th>
-              <th className={styles.performanceTableHead}>Retorno (%)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {performanceData.map((month) => (
-              <tr key={month.month} className={styles.performanceTableRow}>
-                <td className={styles.performanceTableCell}>
-                  <span className={styles.monthBadge}>{month.month}</span>
-                </td>
-                <td className={styles.performanceTableCell}>
-                  <strong>{formatCurrency(month.value)}</strong>
-                </td>
-                <td className={styles.performanceTableCell} style={{ color: month.return >= 0 ? '#16a34a' : '#dc2626' }}>
-                  <div className={styles.returnCell}>
-                    {month.return >= 0 ? '↗' : '↘'} {formatCurrency(month.return)}
-                  </div>
-                </td>
-                <td className={styles.performanceTableCell} style={{ color: month.returnPercentage >= 0 ? '#16a34a' : '#dc2626' }}>
-                  <div className={styles.returnCell}>
-                    {month.returnPercentage >= 0 ? '+' : ''}{month.returnPercentage.toFixed(2)}%
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : ( 
-        <div className={styles.emptyState}><p>Nenhum dado disponível</p></div> 
-      )}
-    </div>
-  </div>
-)}
+          <div className={styles.performanceTable}>
+            <h4>Performance Mensal Detalhada</h4>
+            <div className={styles.tableContainer}>
+              {isLoading ? ( 
+                <div className={styles.loadingState}><p>Carregando dados...</p></div> 
+              ) : 
+              performanceData.length > 0 ? (
+                <table className={styles.performanceTableTable}>
+                  <thead>
+                    <tr>
+                      <th className={styles.performanceTableHead}>Mês</th>
+                      <th className={styles.performanceTableHead}>Valor Acumulado</th>
+                      <th className={styles.performanceTableHead}>Retorno (R$)</th>
+                      <th className={styles.performanceTableHead}>Retorno (%)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {performanceData.map((month) => (
+                      <tr key={month.month} className={styles.performanceTableRow}>
+                        <td className={styles.performanceTableCell}>
+                          <span className={styles.monthBadge}>{month.month}</span>
+                        </td>
+                        <td className={styles.performanceTableCell}>
+                          <strong>{formatCurrency(month.value)}</strong>
+                        </td>
+                        <td className={styles.performanceTableCell} style={{ color: month.return >= 0 ? '#16a34a' : '#dc2626' }}>
+                          <div className={styles.returnCell}>
+                            {month.return >= 0 ? '↗' : '↘'} {formatCurrency(month.return)}
+                          </div>
+                        </td>
+                        <td className={styles.performanceTableCell} style={{ color: month.returnPercentage >= 0 ? '#16a34a' : '#dc2626' }}>
+                          <div className={styles.returnCell}>
+                            {month.returnPercentage >= 0 ? '+' : ''}{month.returnPercentage.toFixed(2)}%
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : ( 
+                <div className={styles.emptyState}><p>Nenhum dado disponível</p></div> 
+              )}
+            </div>
+          </div>
+        )}
+
         {activeTab === 'analysis' && (
           <div className={styles.analysisTab}>
             <h4>Análise de Performance</h4>

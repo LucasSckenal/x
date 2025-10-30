@@ -1,6 +1,6 @@
 // firebase.ts
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import { createUserWithEmailAndPassword, getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -20,6 +20,10 @@ export const auth = getAuth(app);
 export const provider = new GoogleAuthProvider();
 export const loginWithGoogle = () => signInWithPopup(auth, provider);
 export const logout = () => signOut(auth);
+export const registerWithEmail = async (email: string, password: string) => {
+  const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+  return userCredential.user;
+};
 
 // Firestore
 export const db = getFirestore(app);
