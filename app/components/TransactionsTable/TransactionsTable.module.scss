@@ -1341,3 +1341,34 @@
   }
 }
 
+.projectionRow {
+  opacity: 0.6;
+  font-style: italic;
+  background: rgba(var(--accent-rgb), 0.02);
+}
+
+.recurringOptions {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(var(--text-rgb), 0.05);
+  border-radius: var(--radius-md);
+
+  p {
+    font-size: 0.85rem;
+    margin-bottom: 0.8rem;
+    font-weight: 600;
+  }
+
+  .radioGroup {
+    display: flex;
+    gap: 1rem;
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+  }
+}

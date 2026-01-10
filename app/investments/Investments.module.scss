@@ -1,0 +1,1866 @@
+// app/investments/Investments.module.scss
+/* ==========================================================================
+   Investments Page - Estilos Consolidados
+   ========================================================================== */
+
+/* ==========================================================================
+   1. Layout da Página
+   ========================================================================== */
+.pageWrap {
+ min-height: 100vh;
+ background: var(--bg);
+ padding-bottom: 2rem;
+}
+
+.container {
+ max-width: 1400px;
+ margin: 0 auto;
+ padding: 0 1.5rem;
+}
+
+.loading {
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ height: 100vh;
+ font-size: 1.125rem;
+ color: var(--muted);
+}
+
+/* ==========================================================================
+   2. Hero Section
+   ========================================================================== */
+.hero {
+ background: linear-gradient(135deg, var(--card) 0%, rgba(var(--accent-rgb), 0.03) 100%);
+ border: 1px solid var(--border);
+ border-radius: var(--radius-lg);
+ padding: 2.5rem;
+ margin: 1.5rem 0 2.5rem 0;
+ position: relative;
+ overflow: hidden;
+
+ &::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(var(--accent-rgb), 0.1) 0%, transparent 70%);
+  pointer-events: none;
+ }
+}
+
+.heroContent {
+ display: grid;
+ grid-template-columns: 1fr auto;
+ gap: 3rem;
+ align-items: center;
+ margin-bottom: 2rem;
+
+ @media (max-width: 968px) {
+  grid-template-columns: 1fr;
+  gap: 2rem;
+ }
+}
+
+.heroText {
+ .heroTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 0.5rem;
+
+  @media (max-width: 768px) {
+   font-size: 1.75rem;
+  }
+ }
+
+ .heroSubtitle {
+  font-size: 1.125rem;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.6;
+ }
+}
+
+.heroStats {
+ .mainStat {
+  text-align: right;
+
+  @media (max-width: 968px) {
+   text-align: left;
+  }
+
+  .statLabel {
+   display: block;
+   font-size: 0.875rem;
+   color: var(--muted);
+   margin-bottom: 0.5rem;
+   text-transform: uppercase;
+   letter-spacing: 0.5px;
+   font-weight: 600;
+  }
+
+  .statValue {
+   font-size: 2.5rem;
+   font-weight: 700;
+   color: var(--text);
+   margin: 0 0 0.5rem 0;
+   line-height: 1;
+
+   @media (max-width: 768px) {
+    font-size: 2rem;
+   }
+  }
+
+  .statChange {
+   display: inline-flex;
+   align-items: center;
+   gap: 0.25rem;
+   padding: 0.375rem 0.75rem;
+   border-radius: 20px;
+   font-size: 0.875rem;
+   font-weight: 600;
+
+   &.positive {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--positive);
+   }
+
+   &.negative {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--negative);
+   }
+  }
+ }
+}
+
+.heroActions {
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ gap: 1rem;
+
+ @media (max-width: 768px) {
+  flex-direction: column;
+  align-items: stretch;
+ }
+}
+
+.actionGroup {
+ display: flex;
+ gap: 0.75rem;
+
+ @media (max-width: 480px) {
+  flex-direction: column;
+ }
+}
+
+.primaryButton {
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+ background: linear-gradient(135deg, var(--accent), var(--accent-600));
+ color: white;
+ padding: 0.875rem 1.5rem;
+ border-radius: var(--radius);
+ font-weight: 600;
+ border: none;
+ cursor: pointer;
+ transition: all 0.3s ease;
+ box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+
+ &:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.3);
+ }
+}
+
+.secondaryButton {
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+ background: var(--card);
+ color: var(--text);
+ padding: 0.875rem 1.5rem;
+ border-radius: var(--radius);
+ font-weight: 500;
+ border: 1px solid var(--border);
+ cursor: pointer;
+ transition: all 0.3s ease;
+
+ &:hover {
+  background: var(--panel);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+ }
+}
+
+/* ==========================================================================
+   3. Summary Grid
+   ========================================================================== */
+.summaryGrid {
+ display: grid;
+ grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+ gap: 1.5rem;
+ margin-bottom: 2.5rem;
+}
+
+.summaryCard {
+ background: var(--card);
+ border: 1px solid var(--border);
+ border-radius: var(--radius-lg);
+ padding: 1.75rem;
+ cursor: pointer;
+ transition: all 0.3s ease;
+ position: relative;
+ overflow: hidden;
+
+ &:hover {
+  border-color: var(--accent);
+  box-shadow: 0 8px 30px var(--shadow);
+  transform: translateY(-4px);
+ }
+}
+
+.summaryHeader {
+ display: flex;
+ justify-content: space-between;
+ align-items: flex-start;
+ margin-bottom: 1.25rem;
+}
+
+.summaryIconWrapper {
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ width: 3rem;
+ height: 3rem;
+ background: linear-gradient(135deg, var(--panel), var(--panel-strong));
+ border-radius: 12px;
+
+ .summaryIcon {
+  color: var(--accent);
+ }
+}
+
+.trendIndicator {
+ display: flex;
+ align-items: center;
+ gap: 0.375rem;
+ padding: 0.375rem 0.75rem;
+ border-radius: 20px;
+ font-size: 0.75rem;
+ font-weight: 600;
+
+ &.trendUp {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--positive);
+ }
+
+ &.trendDown {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--negative);
+ }
+}
+
+.summaryContent {
+ h3.summaryValue {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 0.5rem 0;
+  line-height: 1.2;
+ }
+
+ .summaryTitle {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 0.25rem 0;
+ }
+
+ .summarySubtitle {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: 0;
+ }
+}
+
+.summaryFooter {
+ margin-top: 1.25rem;
+}
+
+.progressBar {
+ width: 100%;
+ height: 4px;
+ background: var(--panel);
+ border-radius: 2px;
+ overflow: hidden;
+}
+
+.progressFill {
+ height: 100%;
+ border-radius: 2px;
+ transition: width 0.3s ease;
+
+ &.progressUp {
+  background: linear-gradient(90deg, var(--positive), #34d399);
+ }
+
+ &.progressDown {
+  background: linear-gradient(90deg, var(--negative), #f87171);
+ }
+}
+
+/* ==========================================================================
+   4. Distribution Section
+   ========================================================================== */
+.distributionSection {
+ margin-bottom: 2.5rem;
+}
+
+.sectionHeader {
+ margin-bottom: 1.5rem;
+
+ .sectionTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 0.25rem 0;
+ }
+
+ .sectionSubtitle {
+  font-size: 0.875rem;
+  color: var(--muted);
+ }
+}
+
+.distributionGrid {
+ display: grid;
+ grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+ gap: 1rem;
+}
+
+.performanceCard {
+ background: var(--card);
+ border: 1px solid var(--border);
+ border-radius: var(--radius);
+ padding: 1.25rem;
+ transition: all 0.2s ease;
+ cursor: pointer;
+
+ &:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+ }
+}
+
+.performanceHeader {
+ display: flex;
+ align-items: center;
+ gap: 0.75rem;
+ margin-bottom: 0.75rem;
+}
+
+.typeIconWrapper {
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ width: 2.5rem;
+ height: 2.5rem;
+ border-radius: 10px;
+ font-size: 1.125rem;
+}
+
+.performanceInfo {
+ display: flex;
+ flex-direction: column;
+ gap: 0.125rem;
+
+ .typeName {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text);
+ }
+
+ .performanceValue {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+ }
+}
+
+.performancePercentage {
+ text-align: right;
+ font-size: 1.125rem;
+ font-weight: 700;
+ color: var(--text);
+}
+
+/* ==========================================================================
+   5. Controls Section
+   ========================================================================== */
+.controlsSection {
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ margin-bottom: 1.5rem;
+ padding: 1rem 0;
+ border-bottom: 1px solid var(--border);
+
+ @media (max-width: 768px) {
+  flex-direction: column;
+  gap: 1rem;
+  align-items: stretch;
+ }
+}
+
+.controlsLeft {
+ display: flex;
+ align-items: center;
+ gap: 1.5rem;
+}
+
+.viewControls {
+ display: flex;
+ background: var(--panel);
+ border-radius: var(--radius);
+ padding: 0.25rem;
+}
+
+.viewButton {
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+ padding: 0.5rem 1rem;
+ border-radius: 6px;
+ border: none;
+ background: transparent;
+ color: var(--muted);
+ cursor: pointer;
+ transition: all 0.2s ease;
+ font-size: 0.875rem;
+ font-weight: 500;
+
+ &.active {
+  background: var(--card);
+  color: var(--text);
+  box-shadow: 0 1px 3px var(--shadow);
+ }
+
+ &:hover:not(.active) {
+  color: var(--text);
+ }
+}
+
+.sortSelect {
+ background: var(--card);
+ border: 1px solid var(--border);
+ border-radius: var(--radius);
+ padding: 0.5rem 1rem;
+ color: var(--text);
+ font-size: 0.875rem;
+ cursor: pointer;
+
+ &:focus {
+  outline: none;
+  border-color: var(--accent);
+ }
+}
+
+.controlsRight {
+ display: flex;
+ align-items: center;
+ gap: 1rem;
+}
+
+.filterGroup {
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+ color: var(--muted);
+}
+
+.filterSelect {
+ background: var(--card);
+ border: 1px solid var(--border);
+ border-radius: var(--radius);
+ padding: 0.5rem 1rem;
+ color: var(--text);
+ font-size: 0.875rem;
+ cursor: pointer;
+
+ &:focus {
+  outline: none;
+  border-color: var(--accent);
+ }
+}
+
+/* ==========================================================================
+   6. Investments Grid
+   ========================================================================== */
+.investmentsGrid {
+ display: grid;
+ grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+ gap: 1.5rem;
+}
+
+.investmentGridCard {
+ background: var(--card);
+ border: 1px solid var(--border);
+ border-radius: var(--radius-lg);
+ padding: 1.5rem;
+ cursor: pointer;
+ transition: all 0.3s ease;
+ position: relative;
+
+ &:hover {
+  border-color: var(--accent);
+  box-shadow: 0 8px 30px var(--shadow);
+ }
+}
+
+.cardHeader {
+ display: flex;
+ justify-content: space-between;
+ align-items: flex-start;
+ margin-bottom: 1.25rem;
+}
+
+.typeBadge {
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+ padding: 0.375rem 0.75rem;
+ border-radius: 20px;
+ font-size: 0.75rem;
+ font-weight: 600;
+}
+
+.cardActions {
+ display: flex;
+ gap: 0.25rem;
+}
+
+.actionBtn {
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ width: 2rem;
+ height: 2rem;
+ border: 1px solid var(--border);
+ border-radius: 6px;
+ background: transparent;
+ color: var(--muted);
+ cursor: pointer;
+ transition: all 0.2s ease;
+
+ &:hover {
+  background: var(--panel);
+  color: var(--text);
+  border-color: var(--accent);
+ }
+}
+
+.cardBody {
+ margin-bottom: 1.5rem;
+
+ .investmentName {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 0.25rem 0;
+  line-height: 1.3;
+ }
+
+ .investmentSymbol {
+  font-size: 0.875rem;
+  color: var(--muted);
+  font-weight: 500;
+  margin: 0 0 1rem 0;
+  font-family: 'Monaco', 'Consolas', monospace;
+ }
+}
+
+.valueContainer {
+ .valueLabel {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+ }
+
+ .valueAmount {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+ }
+}
+
+.cardFooter {
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ padding-top: 1rem;
+ border-top: 1px solid var(--border);
+}
+
+.performanceIndicator {
+ display: flex;
+ align-items: center;
+ gap: 0.25rem;
+ padding: 0.25rem 0.5rem;
+ background: rgba(16, 185, 129, 0.1);
+ color: var(--positive);
+ border-radius: 12px;
+ font-size: 0.75rem;
+ font-weight: 600;
+}
+
+.updateText {
+ font-size: 0.75rem;
+ color: var(--muted);
+}
+
+/* ==========================================================================
+   7. Investments List
+   ========================================================================== */
+.investmentsList {
+ background: var(--card);
+ border: 1px solid var(--border);
+ border-radius: var(--radius-lg);
+ overflow: hidden;
+}
+
+.listHeader {
+ display: flex;
+ background: var(--panel);
+ padding: 1rem 1.5rem;
+ border-bottom: 1px solid var(--border);
+ font-size: 0.75rem;
+ font-weight: 600;
+ color: var(--muted);
+ text-transform: uppercase;
+ letter-spacing: 0.5px;
+}
+
+.listContent {
+ max-height: 600px;
+ overflow-y: auto;
+}
+
+.investmentListItem {
+ display: flex;
+ align-items: center;
+ padding: 1.25rem 1.5rem;
+ border-bottom: 1px solid var(--border);
+ cursor: pointer;
+ transition: all 0.2s ease;
+
+ &:last-child {
+  border-bottom: none;
+ }
+
+ &:hover {
+  background: var(--panel);
+ }
+}
+
+.listCell {
+ padding: 0 0.5rem;
+}
+
+.assetInfo {
+ display: flex;
+ align-items: center;
+ gap: 0.75rem;
+}
+
+.typeIndicator {
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ width: 2.5rem;
+ height: 2.5rem;
+ border-radius: 8px;
+ font-size: 1rem;
+}
+
+.assetDetails {
+ display: flex;
+ flex-direction: column;
+ gap: 0.125rem;
+
+ .assetName {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 0.95rem;
+ }
+
+ .assetSymbol {
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-family: 'Monaco', 'Consolas', monospace;
+ }
+}
+
+.typeTag {
+ padding: 0.25rem 0.75rem;
+ border-radius: 12px;
+ font-size: 0.75rem;
+ font-weight: 600;
+}
+
+.valueText {
+ font-weight: 600;
+ color: var(--text);
+ font-size: 0.95rem;
+}
+
+.performanceBadge {
+ display: inline-flex;
+ align-items: center;
+ gap: 0.25rem;
+ padding: 0.375rem 0.75rem;
+ background: rgba(16, 185, 129, 0.1);
+ color: var(--positive);
+ border-radius: 12px;
+ font-size: 0.75rem;
+ font-weight: 600;
+}
+
+.dateText {
+ font-size: 0.875rem;
+ color: var(--muted);
+}
+
+.listActions {
+ display: flex;
+ gap: 0.25rem;
+ justify-content: flex-end;
+}
+
+.listActionBtn {
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ width: 2rem;
+ height: 2rem;
+ border: 1px solid var(--border);
+ border-radius: 6px;
+ background: transparent;
+ color: var(--muted);
+ cursor: pointer;
+ transition: all 0.2s ease;
+
+ &:hover {
+  background: var(--panel);
+  color: var(--text);
+  border-color: var(--accent);
+ }
+}
+
+/* ==========================================================================
+   8. Empty State
+   ========================================================================== */
+.emptyState {
+ display: flex;
+ flex-direction: column;
+ align-items: center;
+ justify-content: center;
+ text-align: center;
+ padding: 4rem 2rem;
+ background: var(--card);
+ border: 2px dashed var(--border);
+ border-radius: var(--radius-lg);
+
+ .emptyIllustration {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 6rem;
+  height: 6rem;
+  background: var(--panel);
+  border-radius: 50%;
+  margin-bottom: 1.5rem;
+  color: var(--muted);
+ }
+
+ h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 0.75rem 0;
+ }
+
+ p {
+  color: var(--muted);
+  margin: 0 0 2rem 0;
+  max-width: 400px;
+  line-height: 1.5;
+  font-size: 1rem;
+ }
+}
+
+.emptyAction {
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+ background: linear-gradient(135deg, var(--accent), var(--accent-600));
+ color: white;
+ padding: 0.875rem 1.5rem;
+ border-radius: var(--radius);
+ font-weight: 600;
+ border: none;
+ cursor: pointer;
+ transition: all 0.3s ease;
+
+ &:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.3);
+ }
+}
+
+/* ==========================================================================
+   9. Modals
+   ========================================================================== */
+.modalBackdrop {
+ position: fixed;
+ inset: 0;
+ backdrop-filter: blur(12px) saturate(160%);
+ -webkit-backdrop-filter: blur(12px) saturate(160%);
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ z-index: 1000;
+ padding: 1rem;
+}
+
+.modal {
+ background: linear-gradient(135deg, var(--card) 100%, var(--panel-strong) 0%);
+ border: 1px solid var(--glass-border);
+ border-radius: var(--radius-lg);
+ box-shadow: 0 20px 40px var(--shadow),
+  0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+ padding: 2rem;
+ width: 100%;
+ max-height: 90vh;
+ color: var(--text);
+ backdrop-filter: blur(20px);
+ -webkit-backdrop-filter: blur(20px);
+ position: relative;
+ overflow-y: auto;
+
+ &::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+ }
+}
+
+.modalSmall {
+ max-width: 480px !important;
+}
+
+.modalMedium {
+ max-width: 600px !important;
+}
+
+.modalLarge {
+ max-width: 800px !important;
+ width: 95% !important;
+
+ @media (max-width: 768px) {
+  max-width: 95% !important;
+  width: 95% !important;
+  margin: 0.5rem;
+ }
+}
+
+.modalHeader {
+ display: flex;
+ align-items: center;
+ justify-content: space-between;
+ margin-bottom: 1.5rem;
+ padding-bottom: 1rem;
+ border-bottom: 1px solid var(--glass-border);
+
+ h3 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin: 0;
+  background: linear-gradient(135deg, var(--text), var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+ }
+
+ .closeBtn {
+  background: var(--panel-strong);
+  border: 1px solid var(--glass-border);
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 50%;
+  padding: 8px;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+   color: var(--accent);
+   background: var(--accent);
+   color: white;
+   border-color: var(--accent);
+   box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+  }
+ }
+}
+
+.modalForm {
+ display: flex;
+ flex-direction: column;
+ gap: 1.2rem;
+}
+
+.formRow {
+ display: flex;
+ gap: 1rem;
+}
+
+.formGroup {
+ flex: 1;
+ display: flex;
+ flex-direction: column;
+ gap: 0.5rem;
+
+ label {
+  font-size: 0.9rem;
+  color: var(--muted);
+  font-weight: 500;
+  margin-left: 0.2rem;
+ }
+
+ input,
+ select {
+  background: var(--panel-strong);
+  border: 1.5px solid var(--glass-border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 0.95rem;
+  padding: 0.75rem 1rem;
+  height: 48px;
+  outline: none;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+
+  &:focus {
+   border-color: var(--accent);
+   background: var(--panel);
+   box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.15),
+    0 4px 20px rgba(139, 92, 246, 0.2);
+   transform: translateY(-1px);
+  }
+
+  &::placeholder {
+   color: var(--muted);
+   opacity: 0.6;
+  }
+ }
+}
+
+.modalActions {
+ display: flex;
+ justify-content: flex-end;
+ gap: 1rem;
+ margin-top: 2rem;
+ padding-top: 1.5rem;
+ border-top: 1px solid var(--glass-border);
+
+ button {
+  flex: none;
+  height: 44px;
+  padding: 0 1.5rem;
+  border-radius: var(--radius);
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+ }
+
+ .cancelButton {
+  background: var(--panel-strong);
+  color: var(--muted);
+  border: 1.5px solid var(--glass-border);
+
+  &:hover {
+   background: var(--panel);
+   color: var(--text);
+   border-color: var(--muted);
+   transform: translateY(-1px);
+  }
+ }
+
+ .saveButton {
+  background: linear-gradient(135deg, var(--accent), var(--accent-600));
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+   content: '';
+   position: absolute;
+   top: 0;
+   left: -100%;
+   width: 100%;
+   height: 100%;
+   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+   transition: left 0.5s;
+  }
+
+  &:hover {
+   transform: translateY(-2px);
+   box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+
+   &::before {
+    left: 100%;
+   }
+  }
+ }
+
+ .deleteConfirmButton {
+  background: linear-gradient(135deg, var(--negative), #dc2626);
+  color: #fff;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+
+  &:hover {
+   transform: translateY(-2px);
+   box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+  }
+ }
+}
+
+.confirmContent {
+ text-align: center;
+ display: flex;
+ flex-direction: column;
+ align-items: center;
+ gap: 1rem;
+ padding: 1rem 0;
+
+ .confirmIcon {
+  color: var(--warning);
+ }
+
+ p {
+  color: var(--text);
+  margin: 0;
+  line-height: 1.5;
+ }
+
+ .warningText {
+  color: var(--muted);
+  font-size: 0.85rem;
+  opacity: 0.8;
+ }
+}
+
+/* ==========================================================================
+   10. Investment Details Modal
+   ========================================================================== */
+.detailsContent {
+ display: flex;
+ flex-direction: column;
+ gap: 1.5rem;
+}
+
+.detailsHeader {
+ display: flex;
+ justify-content: space-between;
+ align-items: flex-start;
+ padding: 1rem 0;
+ border-bottom: 1px solid var(--glass-border);
+
+ @media (max-width: 768px) {
+  flex-direction: column;
+  gap: 1rem;
+ }
+}
+
+.investmentType {
+ display: flex;
+ gap: 0.5rem;
+ align-items: center;
+}
+
+.investmentStats {
+ display: flex;
+ gap: 1.5rem;
+
+ @media (max-width: 768px) {
+  width: 100%;
+  justify-content: space-between;
+  gap: 1rem;
+ }
+
+ @media (max-width: 480px) {
+  flex-direction: column;
+  gap: 0.75rem;
+ }
+}
+
+.stat {
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+ font-size: 0.9rem;
+
+ svg {
+  color: var(--accent);
+  flex-shrink: 0;
+ }
+
+ span {
+  color: var(--muted);
+  margin-right: 0.5rem;
+ }
+
+ strong {
+  color: var(--text);
+  font-weight: 600;
+ }
+}
+
+.tabs {
+ display: flex;
+ gap: 0.5rem;
+ margin-bottom: 1.5rem;
+ border-bottom: 1px solid var(--glass-border);
+ padding-bottom: 0.5rem;
+
+ @media (max-width: 480px) {
+  flex-wrap: wrap;
+ }
+}
+
+.tab {
+ background: transparent;
+ border: none;
+ color: var(--muted);
+ padding: 0.75rem 1.5rem;
+ border-radius: var(--radius) var(--radius) 0 0;
+ cursor: pointer;
+ transition: all 0.3s ease;
+ font-size: 0.9rem;
+ font-weight: 500;
+
+ &:hover {
+  background: var(--panel-strong);
+  color: var(--text);
+ }
+
+ &.activeTab {
+  background: var(--panel-strong);
+  color: var(--accent);
+  border-bottom: 2px solid var(--accent);
+ }
+
+ @media (max-width: 480px) {
+  flex: 1;
+  min-width: 120px;
+  text-align: center;
+  padding: 0.75rem 1rem;
+ }
+}
+
+.performanceChart {
+ background: var(--card);
+ border: 1px solid var(--glass-border);
+ border-radius: var(--radius-lg);
+ padding: 1.5rem;
+ margin-bottom: 1.5rem;
+}
+
+.chartHeader {
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ margin-bottom: 1.5rem;
+
+ h4 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.1rem;
+  font-weight: 600;
+ }
+
+ @media (max-width: 768px) {
+  flex-direction: column;
+  gap: 1rem;
+  align-items: flex-start;
+ }
+}
+
+.chartControls {
+ display: flex;
+ gap: 0.5rem;
+
+ @media (max-width: 768px) {
+  width: 100%;
+  justify-content: center;
+ }
+}
+
+.chartTypeButton {
+ background: var(--panel-strong);
+ border: 1px solid var(--glass-border);
+ color: var(--muted);
+ padding: 0.5rem 1rem;
+ border-radius: var(--radius);
+ cursor: pointer;
+ transition: all 0.3s ease;
+ font-size: 0.8rem;
+
+ &:hover {
+  background: var(--panel);
+  color: var(--text);
+ }
+
+ &.activeChartType {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+ }
+}
+
+.lineChartContainer {
+ position: relative;
+ height: 300px;
+ margin-bottom: 1rem;
+ overflow: visible;
+
+ @media (max-width: 480px) {
+  height: 250px;
+ }
+}
+
+.lineChart {
+ display: flex;
+ height: 100%;
+ position: relative;
+}
+
+.yAxis {
+ position: relative;
+ width: 80px;
+ margin-right: 1rem;
+ flex-shrink: 0;
+
+ @media (max-width: 480px) {
+  width: 60px;
+ }
+}
+
+.yTick {
+ position: absolute;
+ left: 0;
+ width: 100%;
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+}
+
+.yLabel {
+ font-size: 0.7rem;
+ color: var(--muted);
+ white-space: nowrap;
+}
+
+.gridLine {
+ flex: 1;
+ height: 1px;
+ background: var(--glass-border);
+ opacity: 0.5;
+}
+
+.chartSvgContainer {
+ flex: 1;
+ position: relative;
+ overflow: visible;
+}
+
+.lineSvg {
+ width: 100%;
+ height: 100%;
+}
+
+.dataPoint {
+ cursor: pointer;
+}
+
+.lineTooltip {
+ position: absolute;
+ pointer-events: none;
+ z-index: 10;
+}
+
+.tooltipArrow {
+ position: absolute;
+ bottom: -4px;
+ left: 50%;
+ transform: translateX(-50%);
+ width: 0;
+ height: 0;
+ border-left: 6px solid transparent;
+ border-right: 6px solid transparent;
+ border-top: 6px solid var(--panel-strong);
+}
+
+.tooltipContent {
+ background: var(--card);
+ border: 1px solid var(--glass-border);
+ border-radius: var(--radius);
+ padding: 0.75rem;
+ box-shadow: 0 8px 25px var(--shadow);
+ backdrop-filter: blur(10px);
+ min-width: 160px;
+
+ @media (max-width: 480px) {
+  min-width: 140px;
+  padding: 0.5rem;
+ }
+}
+
+.tooltipHeader {
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ margin-bottom: 0.5rem;
+
+ strong {
+  font-size: 0.9rem;
+  color: var(--text);
+ }
+}
+
+.tooltipReturn {
+ font-size: 0.8rem;
+ font-weight: 600;
+}
+
+.tooltipBody {
+ display: flex;
+ flex-direction: column;
+ gap: 0.25rem;
+}
+
+.tooltipRow {
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ font-size: 0.8rem;
+
+ span {
+  color: var(--muted);
+ }
+
+ strong {
+  color: var(--text);
+ }
+}
+
+.xAxis {
+ position: relative;
+ height: 40px;
+ margin-top: 0.5rem;
+}
+
+.xTick {
+ position: absolute;
+ top: 0;
+ transform: translateX(-50%);
+ display: flex;
+ flex-direction: column;
+ align-items: center;
+ gap: 0.25rem;
+}
+
+.xLabel {
+ font-size: 0.7rem;
+ color: var(--muted);
+ white-space: nowrap;
+}
+
+.xMarker {
+ width: 2px;
+ height: 6px;
+ background: var(--muted);
+ border-radius: 1px;
+ transition: all 0.3s ease;
+}
+
+.chartLegend {
+ display: flex;
+ align-items: center;
+ gap: 1.5rem;
+ padding-top: 1rem;
+ border-top: 1px solid var(--glass-border);
+ flex-wrap: wrap;
+
+ @media (max-width: 768px) {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+ }
+}
+
+.legendItem {
+ display: flex;
+ align-items: center;
+ gap: 0.5rem;
+ font-size: 0.8rem;
+ color: var(--muted);
+}
+
+.legendColor {
+ width: 12px;
+ height: 12px;
+ border-radius: 2px;
+}
+
+.legendLine {
+ width: 20px;
+ height: 2px;
+ background: var(--muted);
+ border-radius: 1px;
+}
+
+.performanceIndicator {
+ margin-left: auto;
+ font-size: 0.8rem;
+ color: var(--muted);
+
+ strong {
+  margin-left: 0.25rem;
+ }
+
+ @media (max-width: 768px) {
+  margin-left: 0;
+ }
+}
+
+.performanceTable {
+ background: var(--card);
+ border: 1px solid var(--glass-border);
+ border-radius: var(--radius-lg);
+ padding: 1.5rem;
+ margin-bottom: 1.5rem;
+
+ h4 {
+  margin: 0 0 1rem 0;
+  color: var(--text);
+  font-size: 1.1rem;
+  font-weight: 600;
+ }
+}
+
+.tableContainer {
+ overflow-x: auto;
+}
+
+.performanceTableTable {
+ width: 100%;
+ border-collapse: collapse;
+}
+
+.performanceTableHead {
+ background: var(--panel-strong);
+ color: var(--muted);
+ font-weight: 600;
+ font-size: 0.8rem;
+ text-align: left;
+ padding: 0.75rem 1rem;
+ border-bottom: 1px solid var(--glass-border);
+}
+
+.performanceTableCell {
+ padding: 1rem;
+ border-bottom: 1px solid var(--glass-border);
+ font-size: 0.9rem;
+}
+
+.performanceTableRow:last-child .performanceTableCell {
+ border-bottom: none;
+}
+
+.monthBadge {
+ background: var(--panel-strong);
+ color: var(--muted);
+ padding: 0.3rem 0.6rem;
+ border-radius: 1rem;
+ font-size: 0.75rem;
+ font-weight: 600;
+}
+
+.returnCell {
+ display: flex;
+ align-items: center;
+ gap: 0.25rem;
+ font-weight: 600;
+ font-size: 0.85rem;
+}
+
+.analysisTab {
+ background: var(--card);
+ border: 1px solid var(--glass-border);
+ border-radius: var(--radius-lg);
+ padding: 1.5rem;
+ margin-bottom: 1.5rem;
+
+ h4 {
+  margin: 0 0 1.5rem 0;
+  color: var(--text);
+  font-size: 1.1rem;
+  font-weight: 600;
+ }
+}
+
+.analysisGrid {
+ display: grid;
+ grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+ gap: 1rem;
+
+ @media (max-width: 768px) {
+  grid-template-columns: 1fr;
+ }
+}
+
+.analysisCard {
+ background: var(--panel-strong);
+ border: 1px solid var(--glass-border);
+ border-radius: var(--radius);
+ padding: 1.25rem;
+
+ h5 {
+  margin: 0 0 1rem 0;
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 600;
+ }
+}
+
+.statsList {
+ display: flex;
+ flex-direction: column;
+ gap: 0.75rem;
+}
+
+.statItem {
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ font-size: 0.85rem;
+
+ span {
+  color: var(--muted);
+ }
+
+ strong {
+  color: var(--text);
+  font-weight: 600;
+ }
+}
+
+.bestWorstMonth {
+ display: flex;
+ flex-direction: column;
+ gap: 0.5rem;
+ text-align: center;
+}
+
+.monthName {
+ font-size: 0.9rem;
+ color: var(--muted);
+ font-weight: 500;
+}
+
+.monthValue {
+ font-size: 0.8rem;
+ color: var(--muted);
+}
+
+.volatilityInfo {
+ display: flex;
+ flex-direction: column;
+ gap: 0.5rem;
+
+ span {
+  font-size: 0.8rem;
+  color: var(--muted);
+ }
+
+ strong {
+  font-size: 0.9rem;
+  color: var(--text);
+  margin-bottom: 0.25rem;
+ }
+}
+
+.performanceSummary {
+ display: grid;
+ grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+ gap: 1rem;
+
+ @media (max-width: 768px) {
+  grid-template-columns: 1fr;
+ }
+}
+
+.summaryCardModal {
+ background: var(--card);
+ border: 1px solid var(--glass-border);
+ border-radius: var(--radius);
+ padding: 1.5rem;
+ text-align: center;
+
+ h5 {
+  margin: 0 0 1rem 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+ }
+}
+
+.currentValue {
+ font-size: 1.5rem;
+ font-weight: 700;
+ color: var(--text);
+ display: block;
+}
+
+.trendIndicatorModal {
+ font-size: 1.1rem;
+ font-weight: 600;
+ display: block;
+}
+
+.performanceRating {
+ font-size: 0.9rem;
+ font-weight: 600;
+ padding: 0.5rem 1rem;
+ border-radius: 2rem;
+ display: inline-block;
+}
+
+/* ==========================================================================
+   11. Responsive Design
+   ========================================================================== */
+@media (max-width: 768px) {
+ .container {
+  padding: 0 1rem;
+ }
+
+ .hero {
+  padding: 1.5rem;
+ }
+
+ .summaryGrid {
+  grid-template-columns: 1fr;
+ }
+
+ .distributionGrid {
+  grid-template-columns: 1fr;
+ }
+
+ .investmentsGrid {
+  grid-template-columns: 1fr;
+ }
+
+ .investmentListItem {
+  flex-wrap: wrap;
+  gap: 1rem;
+
+  .listCell {
+   width: 100% !important;
+  }
+ }
+
+ .listHeader {
+  display: none;
+ }
+
+ .listActions {
+  justify-content: flex-start;
+ }
+
+ .modalForm {
+  padding: 1.5rem;
+ }
+}
+
+@media (max-width: 480px) {
+ .heroContent {
+  gap: 1.5rem;
+ }
+
+ .heroActions {
+  flex-direction: column;
+ }
+
+ .actionGroup {
+  flex-direction: column;
+ }
+
+ .controlsLeft {
+  flex-direction: column;
+  gap: 1rem;
+ }
+}
+
+/* ==========================================================================
+   12. Animações
+   ========================================================================== */
+@keyframes spin {
+ from {
+  transform: rotate(0deg);
+ }
+
+ to {
+  transform: rotate(360deg);
+ }
+}
+
+@keyframes slideIn {
+ from {
+  opacity: 0;
+  transform: translateX(-20px);
+ }
+
+ to {
+  opacity: 1;
+  transform: translateX(0);
+ }
+}
+
+.refreshing {
+ animation: spin 1s linear infinite;
+}
+
+/* ==========================================================================
+   13. Utilitários
+   ========================================================================== */
+.realTimePerformance {
+ display: flex;
+ flex-direction: column;
+ align-items: flex-end;
+ gap: 2px;
+ min-width: 80px;
+}
+
+.performanceBadgeDetailed {
+ display: flex;
+ align-items: center;
+ gap: 4px;
+ padding: 2px 6px;
+ border-radius: 8px;
+ font-size: 0.7rem;
+ font-weight: 600;
+
+ &.positive {
+  background: rgba(22, 163, 74, 0.15);
+  color: #16a34a;
+  border: 1px solid rgba(22, 163, 74, 0.3);
+ }
+
+ &.negative {
+  background: rgba(220, 38, 38, 0.15);
+  color: #dc2626;
+  border: 1px solid rgba(220, 38, 38, 0.3);
+ }
+}
+
+.priceChange {
+ font-size: 0.65rem;
+ font-weight: 500;
+}
+
+.currentPrice {
+ font-size: 0.6rem;
+ opacity: 0.7;
+ color: var(--text-muted);
+}
+
+/* ==========================================================================
+   14. Ações de Editar e Excluir
+   ========================================================================== */
+.actions {
+ display: flex;
+ flex-direction: column;
+ gap: 0.25rem;
+ align-items: center;
+}
+
+.editButton {
+ border: 1.5px solid var(--glass-border);
+ background: var(--panel);
+ color: var(--muted);
+ cursor: pointer;
+ padding: 6px;
+ border-radius: 6px;
+ transition: all 0.2s ease;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+
+ &:hover {
+  color: var(--accent);
+  background: rgba(139, 92, 246, 0.1);
+ }
+}
+
+.deleteButton {
+ border: 1.5px solid var(--glass-border);
+ background: var(--panel);
+ color: var(--muted);
+ cursor: pointer;
+ padding: 6px;
+ border-radius: 6px;
+ transition: all 0.2s ease;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+
+ &:hover {
+  color: var(--negative);
+  background: rgba(239, 68, 68, 0.1);
+ }
+}
+
+.itemValue {
+ display: flex;
+ align-items: flex-start;
+ gap: 0.8rem;
+}
+
+.valueData {
+ display: flex;
+ flex-direction: column;
+ align-items: flex-end;
+ gap: 0.3rem;
+}

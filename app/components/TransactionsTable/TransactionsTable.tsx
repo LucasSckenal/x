@@ -1,821 +1,524 @@
-'use client';
+"use client";
 
-import { useState, useMemo } from 'react';
-import { Search, Plus, Edit, Trash2, Calendar, ArrowUp, ArrowDown, Filter } from 'lucide-react';
-import Modal from '../Modal/Modal';
-import CustomSelect from '../CustomSelect/CustomSelect';
-import styles from './TransactionsTable.module.scss';
+import { useState, useMemo } from "react";
+import {
+  Search,
+  Plus,
+  Edit,
+  Trash2,
+  Calendar,
+  AlertCircle,
+} from "lucide-react";
+import Modal from "../Modal/Modal";
+import CustomSelect from "../CustomSelect/CustomSelect";
+import styles from "./TransactionsTable.module.scss";
 
-// Exportar a interface Transaction
+// --- Interfaces ---
 export interface Transaction {
   id: string;
   description: string;
   amount: number;
-  type: 'income' | 'expense';
+  type: "income" | "expense";
   category: string;
   categoryIcon: string;
   date: string;
   recurring?: boolean;
-  nextDueDate?: string;
+  recurringFrequency?: "weekly" | "monthly" | "yearly";
+  recurringEndDate?: string;
+  recurringId?: string | null;
+  isProjection?: boolean;
 }
 
-// Exportar as categorias de transação
 export const transactionCategories = [
-  { value: 'Alimentação', label: 'Alimentação', icon: '🍕' },
-  { value: 'Transporte', label: 'Transporte', icon: '🚗' },
-  { value: 'Compras', label: 'Compras', icon: '🛍️' },
-  { value: 'Entretenimento', label: 'Entretenimento', icon: '🎬' },
-  { value: 'Saúde', label: 'Saúde', icon: '🏥' },
-  { value: 'Educação', label: 'Educação', icon: '📚' },
-  { value: 'Salário', label: 'Salário', icon: '💰' },
-  { value: 'Investimentos', label: 'Investimentos', icon: '📈' },
-  { value: 'Outros', label: 'Outros', icon: '📦' },
-  { value: 'Cartão de Crédito', label: 'Cartão de Crédito', icon: '💳' },
-  { value: 'Lazer', label: 'Lazer', icon: '🎉' },
-  { value: 'Moradia', label: 'Moradia', icon: '🏠' },
-  { value: 'Viagem', label: 'Viagem', icon: '✈️' },
-  { value: 'Jogos', label: 'Jogos', icon: '🎮' },
-  { value: 'Presente', label: 'Presente', icon: '🎁' },
-  { value: 'Celular', label: 'Celular', icon: '📱' },
-  { value: 'Internet', label: 'Internet', icon: '🌐' },
-  { value: 'Água', label: 'Água', icon: '🚰' },
-  { value: 'Luz', label: 'Luz', icon: '💡' },
-  { value: 'Gás', label: 'Gás', icon: '🔥' },
-
+  { value: "Alimentação", label: "Alimentação", icon: "🍕" },
+  { value: "Transporte", label: "Transporte", icon: "🚗" },
+  { value: "Compras", label: "Compras", icon: "🛍️" },
+  { value: "Entretenimento", label: "Entretenimento", icon: "🎬" },
+  { value: "Saúde", label: "Saúde", icon: "🏥" },
+  { value: "Educação", label: "Educação", icon: "📚" },
+  { value: "Salário", label: "Salário", icon: "💰" },
+  { value: "Investimentos", label: "Investimentos", icon: "📈" },
+  { value: "Outros", label: "Outros", icon: "📦" },
+  { value: "Moradia", label: "Moradia", icon: "🏠" },
 ];
 
 const frequencyOptions = [
-  { value: 'weekly', label: 'Semanal', icon: '🔄' },
-  { value: 'monthly', label: 'Mensal', icon: '📅' },
-  { value: 'yearly', label: 'Anual', icon: '🎉' }
+  { value: "weekly", label: "Semanal", icon: "🔄" },
+  { value: "monthly", label: "Mensal", icon: "📅" },
+  { value: "yearly", label: "Anual", icon: "🎉" },
 ];
 
-const typeOptions = [
-  { value: 'expense', label: 'Despesa', icon: '📤' },
-  { value: 'income', label: 'Receita', icon: '📥' }
-];
-
-interface TransactionsTableProps {
-  transactions: Transaction[];
-  onAddTransaction?: (transaction: Omit<Transaction, 'id'>) => void;
-  onEditTransaction?: (id: string, transaction: Omit<Transaction, 'id'>) => void;
-  onDeleteTransaction?: (id: string) => void;
-}
-
-interface FormData {
-  description: string;
-  amount: string;
-  type: 'income' | 'expense';
-  category: string;
-  categoryIcon: string;
-  date: string;
-  recurring: boolean;
-  frequency?: 'weekly' | 'monthly' | 'yearly';
-  endDate?: string;
-  nextDueDate?: string;
-}
-
-// Função para corrigir o problema da data 01/01/2000
-const fixDateIssue = (dateString: string): string => {
-  if (!dateString) return new Date().toISOString().split('T')[0];
-  
-  // Se a data for 01/01/2000, substituir pela data atual
-  const date = new Date(dateString);
-  const problematicDate = new Date('2000-01-01');
-  
-  if (date.getTime() === problematicDate.getTime()) {
-    return new Date().toISOString().split('T')[0];
-  }
-  
-  return dateString;
+// --- Funções Auxiliares de Data ---
+const parseSafeDate = (dateStr: string) => {
+  if (!dateStr) return new Date(NaN);
+  // Adiciona T00:00:00 para evitar problemas de fuso horário
+  const d = new Date(dateStr.includes("T") ? dateStr : `${dateStr}T00:00:00`);
+  return d;
 };
 
-// Função para formatar a data para o input type="date"
-const formatDateForInput = (dateString: string): string => {
-  if (!dateString) return new Date().toISOString().split('T')[0];
-
-  try {
-    // Se já estiver no formato YYYY-MM-DD, retorna diretamente
-    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-      return dateString;
-    }
-
-    // Caso o texto venha como: "20 de outubro de 2025 às 00:00:00 UTC-3"
-    const parts = dateString.match(/(\d{1,2}) de (\w+) de (\d{4})/);
-    if (parts) {
-      const day = parseInt(parts[1], 10);
-      const monthStr = parts[2].toLowerCase();
-      const year = parseInt(parts[3], 10);
-
-      const monthsMap: { [key: string]: number } = {
-        janeiro: 0, fevereiro: 1, março: 2, abril: 3, maio: 4, junho: 5,
-        julho: 6, agosto: 7, setembro: 8, outubro: 9, novembro: 10, dezembro: 11
-      };
-
-      const month = monthsMap[monthStr];
-      if (month !== undefined) {
-        const date = new Date(year, month, day);
-        // CORREÇÃO: Formata sem conversão de timezone
-        const formatted = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        return formatted;
-      }
-    }
-
-    // Para formato ISO ou outros, cria a data e formata sem timezone
-    const date = new Date(dateString);
-    if (!isNaN(date.getTime())) {
-      // CORREÇÃO: Extrai diretamente os componentes da data
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    }
-
-    return new Date().toISOString().split('T')[0];
-  } catch {
-    return new Date().toISOString().split('T')[0];
-  }
+const formatToISO = (date: Date) => {
+  if (isNaN(date.getTime())) return "";
+  return date.toISOString().split("T")[0];
 };
 
-
-// Função para formatar a data para exibição
-const formatDateForDisplay = (dateString: string): string => {
-  if (!dateString) return '';
-  
-  try {
-    // Tenta reconhecer formato do Firebase (ex: "20 de outubro de 2025...")
-    const parts = dateString.match(/(\d+) de (\w+) de (\d{4})/);
-    if (parts) {
-      const day = parseInt(parts[1], 10);
-      const monthStr = parts[2].toLowerCase();
-      const year = parseInt(parts[3], 10);
-
-      const monthsMap: { [key: string]: number } = {
-        janeiro: 0, fevereiro: 1, março: 2, abril: 3, maio: 4, junho: 5,
-        julho: 6, agosto: 7, setembro: 8, outubro: 9, novembro: 10, dezembro: 11
-      };
-
-      const month = monthsMap[monthStr];
-      if (month !== undefined) {
-        const date = new Date(year, month, day); // Isso cria data LOCAL
-        return date.toLocaleDateString('pt-BR');
-      }
-    }
-
-    // --- INÍCIO DA CORREÇÃO ---
-    // Checa se é uma string YYYY-MM-DD (como o nextDueDate)
-    const isoParts = dateString.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    if (isoParts) {
-      const year = parseInt(isoParts[1], 10);
-      const month = parseInt(isoParts[2], 10) - 1; // Mês base 0
-      const day = parseInt(isoParts[3], 10);
-      // Cria a data como LOCAL (meia-noite no fuso do usuário)
-      const date = new Date(year, month, day); 
-      return date.toLocaleDateString('pt-BR');
-    }
-    // --- FIM DA CORREÇÃO ---
-
-    // fallback para Timestamps completos (que já incluem fuso)
-    const date = new Date(dateString);
-    if (!isNaN(date.getTime())) {
-      return date.toLocaleDateString('pt-BR');
-    }
-
-    return '';
-  } catch {
-    return '';
-  }
-};
-
-export default function TransactionsTable({ 
-  transactions, 
-  onAddTransaction, 
-  onEditTransaction, 
-  onDeleteTransaction 
-}: TransactionsTableProps) {
+export default function TransactionsTable({
+  transactions,
+  onAddTransaction,
+  onEditTransaction,
+  onDeleteTransaction,
+}: any) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
-  const [sortField, setSortField] = useState<'date' | 'amount' | 'description'>('date');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [monthFilter, setMonthFilter] = useState<string>('all');
-  const [isMonthDropdownOpen, setIsMonthDropdownOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filter, setFilter] = useState("all");
+  const [monthFilter, setMonthFilter] = useState("all");
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<Transaction | null>(null);
+  const [editScope, setEditScope] = useState<"single" | "series">("single");
 
-  // Dados do formulário
-  const [formData, setFormData] = useState<FormData>({
-    description: '',
-    amount: '',
-    type: 'expense',
-    category: '',
-    categoryIcon: '💰',
-    date: formatDateForInput(new Date().toISOString()),
+  const [formData, setFormData] = useState({
+    description: "",
+    amount: "",
+    type: "expense" as "income" | "expense",
+    category: "Outros",
+    categoryIcon: "💰",
+    date: formatToISO(new Date()),
     recurring: false,
-    frequency: 'monthly',
-    endDate: '',
-    nextDueDate: ''
+    frequency: "monthly" as any,
+    endDate: "",
   });
 
-  const months = [
-    { value: 'all', label: 'Todos os meses' },
-    { value: '0', label: 'Janeiro' },
-    { value: '1', label: 'Fevereiro' },
-    { value: '2', label: 'Março' },
-    { value: '3', label: 'Abril' },
-    { value: '4', label: 'Maio' },
-    { value: '5', label: 'Junho' },
-    { value: '6', label: 'Julho' },
-    { value: '7', label: 'Agosto' },
-    { value: '8', label: 'Setembro' },
-    { value: '9', label: 'Outubro' },
-    { value: '10', label: 'Novembro' },
-    { value: '11', label: 'Dezembro' }
-  ];
-
-  // Filtragem e ordenação
+  // --- Lógica de Projeção Blindada ---
   const filteredAndSortedTransactions = useMemo(() => {
-    const filtered = transactions.filter(transaction => {
-      // Filtro por tipo
-      if (filter !== 'all' && transaction.type !== filter) return false;
-      
-      // Filtro por busca
-      if (searchTerm && !transaction.description.toLowerCase().includes(searchTerm.toLowerCase())) {
-        return false;
-      }
-      
-      // Filtro por mês
-      if (monthFilter !== 'all') {
-        const transactionMonth = new Date(transaction.date).getMonth().toString();
-        if (transactionMonth !== monthFilter) return false;
-      }
-      
-      return true;
-    });
+    const expanded: Transaction[] = [];
+    const endOfYear = new Date(new Date().getFullYear(), 11, 31);
 
-    // Ordenação
-    filtered.sort((a, b) => {
-      let aValue, bValue;
-      
-      switch (sortField) {
-        case 'date':
-          aValue = new Date(a.date).getTime();
-          bValue = new Date(b.date).getTime();
-          break;
-        case 'amount':
-          aValue = a.amount;
-          bValue = b.amount;
-          break;
-        case 'description':
-          aValue = a.description.toLowerCase();
-          bValue = b.description.toLowerCase();
-          break;
-        default:
-          return 0;
-      }
-      
-      if (sortDirection === 'asc') {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
+    transactions.forEach((t: Transaction) => {
+      expanded.push(t);
+
+      if (t.recurring && t.recurringFrequency && t.date) {
+        let current = parseSafeDate(t.date);
+        if (isNaN(current.getTime())) return;
+
+        const limitDateStr = t.recurringEndDate || "";
+        const limitDate = limitDateStr
+          ? parseSafeDate(limitDateStr)
+          : endOfYear;
+        const finalLimit =
+          isNaN(limitDate.getTime()) || limitDate > endOfYear
+            ? endOfYear
+            : limitDate;
+
+        let safetyCounter = 0;
+        while (safetyCounter < 50) {
+          // Proteção contra loop infinito
+          safetyCounter++;
+
+          if (t.recurringFrequency === "weekly")
+            current.setDate(current.getDate() + 7);
+          else if (t.recurringFrequency === "monthly")
+            current.setMonth(current.getMonth() + 1);
+          else if (t.recurringFrequency === "yearly")
+            current.setFullYear(current.getFullYear() + 1);
+
+          if (isNaN(current.getTime()) || current > finalLimit) break;
+
+          expanded.push({
+            ...t,
+            id: `${t.id}-proj-${current.getTime()}`,
+            date: formatToISO(current),
+            isProjection: true,
+          });
+        }
       }
     });
 
-    return filtered;
-  }, [transactions, filter, searchTerm, monthFilter, sortField, sortDirection]);
+    return expanded
+      .filter((t) => {
+        const matchesSearch = t.description
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase());
+        const matchesType = filter === "all" || t.type === filter;
+        const tDate = parseSafeDate(t.date);
+        const matchesMonth =
+          monthFilter === "all" ||
+          (!isNaN(tDate.getTime()) &&
+            tDate.getMonth().toString() === monthFilter);
+        return matchesSearch && matchesType && matchesMonth;
+      })
+      .sort(
+        (a, b) =>
+          parseSafeDate(b.date).getTime() - parseSafeDate(a.date).getTime()
+      );
+  }, [transactions, searchTerm, filter, monthFilter]);
 
-  // Agrupar transações por mês
   const transactionsByMonth = useMemo(() => {
-    const groups: { [key: string]: Transaction[] } = {};
-    
-    filteredAndSortedTransactions.forEach(transaction => {
-      const date = new Date(fixDateIssue(transaction.date)); // Corrigir a data aqui também
-      const monthYear = date.toLocaleDateString('pt-BR', { 
-        year: 'numeric', 
-        month: 'long' 
-      }).replace(/de /g, '');
-      
-      if (!groups[monthYear]) {
-        groups[monthYear] = [];
-      }
-      groups[monthYear].push(transaction);
+    const groups: Record<string, Transaction[]> = {};
+    filteredAndSortedTransactions.forEach((t) => {
+      const date = parseSafeDate(t.date);
+      if (isNaN(date.getTime())) return;
+      const monthYear = date.toLocaleDateString("pt-BR", {
+        year: "numeric",
+        month: "long",
+      });
+      if (!groups[monthYear]) groups[monthYear] = [];
+      groups[monthYear].push(t);
     });
-    
     return groups;
   }, [filteredAndSortedTransactions]);
 
-  const handleAddTransaction = () => {
+  // --- Handlers ---
+  const handleEditClick = (t: Transaction) => {
+    setSelectedTransaction(t);
+    setEditScope("single");
     setFormData({
-      description: '',
-      amount: '',
-      type: 'expense',
-      category: '',
-      categoryIcon: '💰',
-      date: formatDateForInput(new Date().toISOString()),
-      recurring: false,
-      frequency: 'monthly',
-      endDate: '',
-      nextDueDate: ''
+      description: t.description,
+      amount: Math.abs(t.amount).toString(),
+      type: t.type,
+      category: t.category,
+      categoryIcon: t.categoryIcon,
+      date: t.date,
+      recurring: t.recurring || false,
+      frequency: t.recurringFrequency || "monthly",
+      endDate: t.recurringEndDate || "",
     });
-    setSelectedTransaction(null);
     setIsModalOpen(true);
   };
 
-const handleEditTransaction = (transaction: Transaction) => {
-  setFormData({
-    description: transaction.description,
-    amount: Math.abs(transaction.amount).toString(),
-    type: transaction.type,
-    category: transaction.category,
-    categoryIcon: transaction.categoryIcon,
-    date: formatDateForInput(transaction.date),
-    recurring: transaction.recurring || false,
-    frequency: transaction.recurringFrequency || 'monthly',
-    endDate: transaction.recurringEndDate ? formatDateForInput(transaction.recurringEndDate) : '',
-    nextDueDate: transaction.nextDueDate ? formatDateForInput(transaction.nextDueDate) : ''
-  });
-  setSelectedTransaction(transaction);
-  setIsModalOpen(true);
-};
+  const handleSave = () => {
+    const data = {
+      ...formData,
+      amount: parseFloat(formData.amount) || 0,
+      scope: editScope,
+      recurringFrequency: formData.frequency,
+      recurringEndDate: formData.endDate || null,
+    };
 
-
-  const handleDeleteTransaction = (transaction: Transaction) => {
-    setSelectedTransaction(transaction);
-    setIsDeleteModalOpen(true);
-  };
-
-const handleSaveTransaction = () => {
-  // Gera ID recorrente se necessário
-  const recurringId = formData.recurring && !selectedTransaction?.recurringId
-    ? `rec_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`
-    : selectedTransaction?.recurringId;
-
-  // CORREÇÃO: Usa a data diretamente do formData (já está no formato YYYY-MM-DD)
-  const finalDate = formData.date; // Ex: "2025-10-20"
-
-  // Calcula próxima data se for recorrente
-  let nextDueDate: string | null = null;
-  if (formData.recurring) {
-    
-    // --- INÍCIO DA CORREÇÃO ---
-    // O problema estava aqui: new Date(finalDate) criava uma data UTC.
-    // Precisamos criar uma data LOCAL para que os cálculos de dia (getDate)
-    // funcionem no fuso horário correto.
-
-    const [year, month, day] = finalDate.split('-').map(Number);
-    // month - 1 porque os meses em new Date() são base 0 (0=Jan, 11=Dez)
-    const next = new Date(year, month - 1, day); 
-    // Isso cria "2025-10-20 00:00:00" no fuso local (UTC-3)
-    // --- FIM DA CORREÇÃO ---
-
-    switch (formData.frequency) {
-      case 'weekly':
-        next.setDate(next.getDate() + 7); // Agora 20 + 7 = 27
-        break;
-      case 'monthly':
-        next.setMonth(next.getMonth() + 1);
-        break;
-      case 'yearly':
-        next.setFullYear(next.getFullYear() + 1);
-        break;
-    }
-    // Formata como YYYY-MM-DD sem problemas de timezone
-    // O resultado será "2025-10-27"
-    nextDueDate = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
-  }
-
-  const transactionData = {
-    description: formData.description,
-    amount: formData.amount,
-    type: formData.type,
-    category: formData.category,
-    categoryIcon: formData.categoryIcon,
-    date: finalDate, // O "2025-10-20" é enviado como string
-    recurring: formData.recurring,
-    recurringFrequency: formData.frequency || 'monthly',
-    recurringEndDate: formData.endDate || null,
-    recurringId: recurringId || null,
-    nextDueDate, // Agora corrigido para "2025-10-27"
-    isActive: true
-  };
-
-  if (selectedTransaction) {
-    onEditTransaction?.(selectedTransaction.id, transactionData);
-  } else {
-    onAddTransaction?.(transactionData);
-  }
-
-  setIsModalOpen(false);
-};
-
-
-  const handleConfirmDelete = () => {
-    if (selectedTransaction) {
-      onDeleteTransaction?.(selectedTransaction.id);
-      setIsDeleteModalOpen(false);
-      setSelectedTransaction(null);
-    }
-  };
-
-  const handleSort = (field: 'date' | 'amount' | 'description') => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    if (selectedTransaction?.isProjection) {
+      onAddTransaction({ ...data, isProjection: false });
+    } else if (selectedTransaction) {
+      onEditTransaction(selectedTransaction.id, data);
     } else {
-      setSortField(field);
-      setSortDirection('desc');
+      onAddTransaction(data);
     }
-  };
-
-  const handleInputChange = (field: keyof FormData, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handleAmountChange = (value: string) => {
-    // Remove caracteres não numéricos, exceto ponto decimal
-    const numericValue = value.replace(/[^\d.]/g, '');
-    handleInputChange('amount', numericValue);
-  };
-
-  const incrementAmount = () => {
-    const currentAmount = parseFloat(formData.amount) || 0;
-    handleInputChange('amount', (currentAmount + 1).toString());
-  };
-
-  const decrementAmount = () => {
-    const currentAmount = parseFloat(formData.amount) || 0;
-    if (currentAmount > 0) {
-      handleInputChange('amount', (currentAmount - 1).toString());
-    }
-  };
-
-  const getCategoryIcon = (category: string) => {
-    if (!category) return '💰';
-    const foundCategory = transactionCategories.find(
-      cat =>
-        cat.value.toLowerCase() === category.toLowerCase() ||
-        cat.label.toLowerCase() === category.toLowerCase()
-    );
-    return foundCategory?.icon || '💰';
-  };
-
-  const modalFooter = (
-    <div className={styles.modalActions}>
-      <button 
-        className={styles.cancelButton} 
-        onClick={() => setIsModalOpen(false)}
-      >
-        Cancelar
-      </button>
-      <button 
-        className={styles.saveButton} 
-        onClick={handleSaveTransaction}
-        disabled={!formData.description || !formData.amount || !formData.category}
-      >
-        {selectedTransaction ? 'Atualizar' : 'Adicionar'}
-      </button>
-    </div>
-  );
-
-  const deleteModalFooter = (
-    <div className={styles.modalActions}>
-      <button 
-        className={styles.cancelButton} 
-        onClick={() => setIsDeleteModalOpen(false)}
-      >
-        Cancelar
-      </button>
-      <button 
-        className={styles.deleteConfirmButton} 
-        onClick={handleConfirmDelete}
-      >
-        Confirmar Exclusão
-      </button>
-    </div>
-  );
-
-  const SortIcon = ({ field }: { field: 'date' | 'amount' | 'description' }) => {
-    if (sortField !== field) return <Filter size={12} />;
-    return sortDirection === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />;
+    setIsModalOpen(false);
   };
 
   return (
     <div className={styles.container}>
-      {/* Header */}
       <div className={styles.header}>
         <h3>Transações</h3>
         <div className={styles.controls}>
-          <div 
-            className={`${styles.monthFilter} ${isMonthDropdownOpen ? styles.open : ''}`}
-            onClick={() => setIsMonthDropdownOpen(!isMonthDropdownOpen)}
-          >
-            <span className={styles.selectedMonth}>
-              {months.find(m => m.value === monthFilter)?.label || 'Todos os meses'}
-            </span>
-            {isMonthDropdownOpen && (
-              <div className={styles.dropdownOptions}>
-                {months.map(month => (
-                  <div
-                    key={month.value}
-                    className={styles.dropdownOption}
-                    onClick={() => {
-                      setMonthFilter(month.value);
-                      setIsMonthDropdownOpen(false);
-                    }}
-                  >
-                    {month.label}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          
           <div className={styles.searchBox}>
             <Search size={18} />
             <input
-              type="text"
-              placeholder="Buscar transações..."
+              placeholder="Buscar..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          
-          <div className={styles.filterButtons}>
-            <button 
-              className={filter === 'all' ? styles.active : ''}
-              onClick={() => setFilter('all')}
-            >
-              Todas
-            </button>
-            <button 
-              className={filter === 'income' ? styles.active : ''}
-              onClick={() => setFilter('income')}
-            >
-              Receitas
-            </button>
-            <button 
-              className={filter === 'expense' ? styles.active : ''}
-              onClick={() => setFilter('expense')}
-            >
-              Despesas
-            </button>
-          </div>
-
-          <button className={styles.addButton} onClick={handleAddTransaction}>
+          <button
+            className={styles.addButton}
+            onClick={() => {
+              setSelectedTransaction(null);
+              setIsModalOpen(true);
+            }}
+          >
             <Plus size={20} />
           </button>
         </div>
       </div>
 
-      {/* Tabela */}
-      {filteredAndSortedTransactions.length === 0 ? (
-        <div className={styles.emptyState}>
-          <div className={styles.emptyIcon}>📊</div>
-          <h3>Nenhuma transação encontrada</h3>
-          <p>
-            {searchTerm || filter !== 'all' || monthFilter !== 'all' 
-              ? 'Tente ajustar os filtros de busca'
-              : 'Adicione sua primeira transação clicando no botão +'
-            }
-          </p>
+      <div className={styles.table}>
+        <div className={styles.tableHeader}>
+          <div>Descrição</div>
+          <div>Categoria</div>
+          <div>Data</div>
+          <div>Valor</div>
+          <div>Ações</div>
         </div>
-      ) : (
-        <div className={styles.table}>
-          {/* Cabeçalho da tabela - Desktop */}
-          <div className={styles.tableHeader}>
-            <div 
-              className={styles.sortableHeader}
-              onClick={() => handleSort('description')}
-            >
-              Descrição <SortIcon field="description" />
-            </div>
-            <div>Categoria</div>
-            <div 
-              className={styles.sortableHeader}
-              onClick={() => handleSort('date')}
-            >
-              Data <SortIcon field="date" />
-            </div>
-            <div 
-              className={styles.sortableHeader}
-              onClick={() => handleSort('amount')}
-            >
-              Valor <SortIcon field="amount" />
-            </div>
-            <div>Ações</div>
-          </div>
 
-          {/* Transações agrupadas por mês */}
-          {Object.entries(transactionsByMonth).map(([month, monthTransactions]) => (
-            <div key={month}>
-              <div className={styles.monthHeader}>
-                {month}
-              </div>
-              {monthTransactions.map((transaction) => (
-                <div key={transaction.id} className={styles.tableRow}>
-                  <div className={styles.cell}>
-                    <div className={styles.cellDescription}>
-                      <span className={styles.categoryIcon}>
-                        {transaction.categoryIcon || getCategoryIcon(transaction.category)}
-                      </span>
+        {Object.entries(transactionsByMonth).map(([month, items]) => (
+          <div key={month}>
+            <div className={styles.monthHeader}>{month}</div>
+            {items.map((t) => (
+              <div
+                key={t.id}
+                className={`${styles.tableRow} ${
+                  t.isProjection ? styles.projectionRow : ""
+                }`}
+              >
+                <div className={styles.cell}>
+                  <div className={styles.cellDescription}>
+                    <span className={styles.categoryIcon}>
+                      {t.categoryIcon}
+                    </span>
+                    <div>
                       <div>
-                        <div>{transaction.description}</div>
-                        {transaction.recurring && (
-                          <div className={styles.recurringBadge}>
-                            <Calendar size={12} />
-                            Recorrente
-                            {transaction.nextDueDate && (
-                              <span className={styles.nextDueDate}>
-                                • Próxima: {formatDateForDisplay(transaction.nextDueDate)}
-                              </span>
-                            )}
-                          </div>
+                        {t.description}{" "}
+                        {t.isProjection && (
+                          <small style={{ opacity: 0.6 }}>(Previsto)</small>
                         )}
                       </div>
+                      {t.recurring && (
+                        <div className={styles.recurringBadge}>
+                          <Calendar size={12} /> Recorrente
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <div className={styles.cell}>{transaction.category}</div>
-                  <div className={styles.cell}>
-                    {formatDateForDisplay(transaction.date)}
-                  </div>
-                  <div className={`${styles.cell} ${styles.cellAmount}`}>
-                    <span className={transaction.type === 'income' ? styles.income : styles.expense}>
-                      {transaction.type === 'income' ? '+' : '-'} 
-                      R$ {Math.abs(transaction.amount).toFixed(2)}
-                    </span>
-                  </div>
-                  <div className={styles.cellActions}>
-                    <div className={styles.actionButtons}>
-                      <button 
-                        onClick={() => handleEditTransaction(transaction)}
-                        title="Editar transação"
-                      >
-                        <Edit size={16} />
-                      </button>
-                      <button 
-                        onClick={() => handleDeleteTransaction(transaction)}
-                        title="Excluir transação"
+                </div>
+                <div className={styles.cell}>{t.category}</div>
+                <div className={styles.cell}>
+                  {parseSafeDate(t.date).toLocaleDateString("pt-BR")}
+                </div>
+                <div className={`${styles.cell} ${styles.cellAmount}`}>
+                  <span
+                    className={
+                      t.type === "income" ? styles.income : styles.expense
+                    }
+                  >
+                    {t.type === "income" ? "+" : "-"} R${" "}
+                    {Math.abs(t.amount).toFixed(2)}
+                  </span>
+                </div>
+                <div className={styles.cellActions}>
+                  <div className={styles.actionButtons}>
+                    <button onClick={() => handleEditClick(t)}>
+                      <Edit size={16} />
+                    </button>
+                    {!t.isProjection && (
+                      <button
+                        onClick={() => {
+                          setSelectedTransaction(t);
+                          setIsDeleteModalOpen(true);
+                        }}
                       >
                         <Trash2 size={16} />
                       </button>
-                    </div>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
-          ))}
-        </div>
-      )}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
 
-      {/* Modal de Adicionar/Editar Transação */}
+      {/* Modal Principal */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={selectedTransaction ? 'Editar Transação' : 'Nova Transação'}
-        footer={modalFooter}
-        width="520px" // Aumentei um pouco para evitar cortes
+        title={selectedTransaction ? "Editar" : "Novo"}
       >
         <div className={styles.modalForm}>
-          <div className={styles.formRow}>
-            <div className={styles.formGroup}>
-              <label>Descrição *</label>
-              <input 
-                type="text" 
-                placeholder="Descrição da transação"
-                value={formData.description}
-                onChange={(e) => handleInputChange('description', e.target.value)}
-              />
-            </div>
-            <div className={styles.formGroup}>
-              <label>Valor *</label>
-              <div className={styles.numberInputWrapper}>
-                <input 
-                  type="text" 
-                  className={styles.numberInput}
-                  placeholder="0,00"
-                  value={formData.amount}
-                  onChange={(e) => handleAmountChange(e.target.value)}
-                />
-                <div className={styles.numberControls}>
-                  <button 
-                    className={styles.numberBtn}
-                    onClick={incrementAmount}
-                    type="button"
-                  >
-                    +
-                  </button>
-                  <button 
-                    className={styles.numberBtn}
-                    onClick={decrementAmount}
-                    type="button"
-                  >
-                    -
-                  </button>
-                </div>
-              </div>
-            </div>
+          <div className={styles.formGroup}>
+            <label>Descrição</label>
+            <input
+              value={formData.description}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
+            />
           </div>
-
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
-              <label>Tipo *</label>
-              <CustomSelect
-                options={typeOptions}
-                value={formData.type}
-                onChange={(value) => handleInputChange('type', value as 'income' | 'expense')}
-                placeholder="Selecione o tipo"
+              <label>Valor</label>
+              <input
+                type="number"
+                value={formData.amount}
+                onChange={(e) =>
+                  setFormData({ ...formData, amount: e.target.value })
+                }
               />
             </div>
             <div className={styles.formGroup}>
-              <label>Data *</label>
-              <input 
-                type="date" 
+              <label>Data</label>
+              <input
+                type="date"
                 value={formData.date}
-                onChange={(e) => handleInputChange('date', e.target.value)}
+                onChange={(e) =>
+                  setFormData({ ...formData, date: e.target.value })
+                }
               />
             </div>
           </div>
 
           <div className={styles.formGroup}>
-            <label>Categoria *</label>
+            <label>Categoria</label>
             <CustomSelect
               options={transactionCategories}
               value={formData.category}
-              onChange={(value) => {
-                handleInputChange('category', value);
-                handleInputChange('categoryIcon', getCategoryIcon(value));
-              }}
-              placeholder="Selecione uma categoria"
+              onChange={(v) =>
+                setFormData({
+                  ...formData,
+                  category: v,
+                  categoryIcon:
+                    transactionCategories.find((c) => c.value === v)?.icon ||
+                    "💰",
+                })
+              }
             />
           </div>
 
-          {/* Seção de Recorrência */}
           <div className={styles.recurringSection}>
             <label className={styles.checkboxLabel}>
-              <input 
-                type="checkbox" 
-                className={styles.checkboxInput}
+              <input
+                type="checkbox"
                 checked={formData.recurring}
-                onChange={(e) => handleInputChange('recurring', e.target.checked)}
+                onChange={(e) =>
+                  setFormData({ ...formData, recurring: e.target.checked })
+                }
               />
-              <span className={styles.checkboxCustom}></span>
-              Transação Recorrente
+              Recorrente
             </label>
-
             {formData.recurring && (
               <div className={styles.recurringFields}>
                 <div className={styles.formRow}>
                   <div className={styles.formGroup}>
                     <label>Frequência</label>
-                    <div className={styles.selectWrapper}> {/* Wrapper para evitar cortes */}
-                      <CustomSelect
-                        options={frequencyOptions}
-                        value={formData.frequency || 'monthly'}
-                        onChange={(value) => handleInputChange('frequency', value as 'weekly' | 'monthly' | 'yearly')}
-                        placeholder="Selecione a frequência"
-                      />
-                    </div>
+                    <CustomSelect
+                      options={frequencyOptions}
+                      value={formData.frequency}
+                      onChange={(v) =>
+                        setFormData({ ...formData, frequency: v as any })
+                      }
+                    />
                   </div>
                   <div className={styles.formGroup}>
-                    <label>Data Final</label>
-                    <input 
-                      type="date" 
+                    <label>Até quando?</label>
+                    <input
+                      type="date"
                       value={formData.endDate}
-                      onChange={(e) => handleInputChange('endDate', e.target.value)}
+                      onChange={(e) =>
+                        setFormData({ ...formData, endDate: e.target.value })
+                      }
                     />
                   </div>
                 </div>
-                {formData.nextDueDate && (
-                  <div className={styles.nextDueInfo}>
-                    <Calendar size={16} />
-                    Próxima transação: {formatDateForDisplay(formData.nextDueDate)}
-                  </div>
-                )}
               </div>
             )}
+          </div>
+
+          {(selectedTransaction?.recurring ||
+            selectedTransaction?.isProjection) && (
+            <div
+              style={{
+                background: "rgba(var(--accent-rgb), 0.05)",
+                padding: "15px",
+                borderRadius: "8px",
+                marginTop: "10px",
+              }}
+            >
+              <p
+                style={{
+                  fontSize: "12px",
+                  fontWeight: "bold",
+                  marginBottom: "8px",
+                }}
+              >
+                Aplicar em:
+              </p>
+              <div style={{ display: "flex", gap: "15px" }}>
+                <label style={{ fontSize: "13px" }}>
+                  <input
+                    type="radio"
+                    checked={editScope === "single"}
+                    onChange={() => setEditScope("single")}
+                  />{" "}
+                  Só esta
+                </label>
+                <label style={{ fontSize: "13px" }}>
+                  <input
+                    type="radio"
+                    checked={editScope === "series"}
+                    onChange={() => setEditScope("series")}
+                  />{" "}
+                  Toda a série
+                </label>
+              </div>
+            </div>
+          )}
+
+          <div className={styles.modalActions}>
+            <button
+              type="button"
+              className={styles.cancelButton}
+              onClick={() => setIsModalOpen(false)}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className={styles.saveButton}
+              onClick={handleSave}
+            >
+              Salvar
+            </button>
           </div>
         </div>
       </Modal>
 
-      {/* Modal de Confirmação de Exclusão */}
+      {/* Modal Deletar */}
       <Modal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
-        title="Confirmar Exclusão"
-        footer={deleteModalFooter}
-        width="400px"
+        title="Excluir"
       >
-        <div className={styles.confirmContent}>
-          <div className={styles.confirmIcon}>⚠️</div>
+        <div style={{ padding: "20px", textAlign: "center" }}>
+          <AlertCircle
+            size={40}
+            color="#ff4444"
+            style={{ marginBottom: "10px" }}
+          />
           <p>
-            Tem certeza que deseja excluir a transação 
-            <strong> "{selectedTransaction?.description}"</strong>?
+            Excluir <strong>{selectedTransaction?.description}</strong>?
           </p>
-          <p className={styles.warningText}>
-            Esta ação não pode ser desfeita.
-          </p>
+          {selectedTransaction?.recurring && (
+            <div
+              style={{
+                marginTop: "15px",
+                textAlign: "left",
+                background: "rgba(0,0,0,0.03)",
+                padding: "10px",
+              }}
+            >
+              <label style={{ display: "block", marginBottom: "5px" }}>
+                <input
+                  type="radio"
+                  checked={editScope === "single"}
+                  onChange={() => setEditScope("single")}
+                />{" "}
+                Só esta
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  checked={editScope === "series"}
+                  onChange={() => setEditScope("series")}
+                />{" "}
+                Toda a série
+              </label>
+            </div>
+          )}
+          <div className={styles.modalActions} style={{ marginTop: "20px" }}>
+            <button
+              className={styles.cancelButton}
+              onClick={() => setIsDeleteModalOpen(false)}
+            >
+              Cancelar
+            </button>
+            <button
+              className={styles.deleteConfirmButton}
+              style={{ background: "#ff4444", color: "white" }}
+              onClick={() => {
+                onDeleteTransaction(selectedTransaction!.id, editScope);
+                setIsDeleteModalOpen(false);
+              }}
+            >
+              Excluir
+            </button>
+          </div>
         </div>
       </Modal>
     </div>

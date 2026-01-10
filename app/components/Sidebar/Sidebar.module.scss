@@ -1,0 +1,252 @@
+/* components/Sidebar/Sidebar.module.scss */
+
+$bg-sidebar: #09090A;
+$text-primary: #E1E1E6;
+$text-secondary: #7C7C8A;
+$text-muted: #505059;
+$accent: #8257e5;
+/* Roxo principal */
+$border: #202024;
+$hover-bg: rgba(255, 255, 255, 0.05);
+$danger: #F75A68;
+
+.sidebarContainer {
+ position: fixed;
+ top: 0;
+ left: 0;
+ bottom: 0;
+ width: 260px;
+ padding: 2rem 0;
+ /* Removi o padding lateral do container para o risco encostar na borda */
+ display: flex;
+ flex-direction: column;
+ z-index: 50;
+ background-color: $bg-sidebar;
+ border-right: 1px solid $border;
+}
+
+.logo {
+ font-size: 1.4rem;
+ font-weight: 700;
+ color: #fff;
+ margin-bottom: 2rem;
+ padding: 0 1.5rem;
+ /* Padding devolvido aqui para alinhar */
+ display: flex;
+ align-items: center;
+ gap: 0.8rem;
+}
+
+.logoIcon {
+ width: 32px;
+ height: 32px;
+ background: $accent;
+ color: #fff;
+ border-radius: 8px;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ font-weight: 800;
+ font-size: 1.2rem;
+}
+
+.nav {
+ display: flex;
+ flex-direction: column;
+ gap: 0.5rem;
+ flex: 1;
+ overflow-y: auto;
+
+ &::-webkit-scrollbar {
+  width: 0px;
+ }
+}
+
+.navGroup {
+ display: flex;
+ flex-direction: column;
+ gap: 0.2rem;
+}
+
+.groupLabel {
+ font-size: 0.7rem;
+ text-transform: uppercase;
+ color: $text-muted;
+ font-weight: 700;
+ letter-spacing: 0.8px;
+ margin-top: 1rem;
+ margin-bottom: 0.4rem;
+ padding-left: 1.5rem;
+}
+
+.separator {
+ height: 1px;
+ background-color: $border;
+ margin: 0.5rem 1.5rem;
+ opacity: 0.5;
+}
+
+/* --- ITEM DE NAVEGAÇÃO --- */
+.navItem {
+ display: flex;
+ align-items: center;
+ gap: 1rem;
+ padding: 0.8rem 1.5rem;
+ /* Padding interno para afastar texto da borda */
+
+ color: $text-secondary;
+ text-decoration: none;
+ font-size: 0.9rem;
+ font-weight: 500;
+ transition: all 0.2s ease-in-out;
+
+ /* O RISCO INVISÍVEL (Reserva espaço para não pular) */
+ border-left: 4px solid transparent;
+
+ &:hover {
+  color: $text-primary;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0%, transparent 100%);
+ }
+
+ /* --- ESTILO SELECIONADO (RISCO + FADE) --- */
+ &.active {
+  /* 1. O RISCO (Borda esquerda sólida) */
+  border-left-color: $accent;
+
+  /* 2. O FADE (Gradiente que começa roxo e fica transparente) */
+  background: linear-gradient(90deg, rgba($accent, 0.15) 0%, rgba($accent, 0) 100%);
+
+  color: #fff;
+  /* Texto branco */
+  font-weight: 600;
+
+  .navIcon {
+   color: $accent;
+   /* Ícone roxo */
+   filter: drop-shadow(0 0 8px rgba($accent, 0.4));
+   /* Brilho no ícone */
+  }
+ }
+}
+
+.navIcon {
+ width: 20px;
+ height: 20px;
+ transition: color 0.2s;
+}
+
+/* --- RODAPÉ --- */
+.footer {
+ margin-top: auto;
+ padding: 1.5rem;
+ border-top: 1px solid $border;
+}
+
+/* CARTÃO DO USUÁRIO */
+.userProfile {
+ display: flex;
+ align-items: center;
+ gap: 1rem;
+ background: #121214;
+ border: 1px solid $border;
+ padding: 0.8rem;
+ border-radius: 12px;
+ cursor: pointer;
+ transition: all 0.2s;
+
+ &:hover {
+  border-color: rgba($accent, 0.5);
+  background: #161619;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+ }
+
+ img {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #202024;
+ }
+}
+
+.avatarFallback {
+ width: 38px;
+ height: 38px;
+ border-radius: 50%;
+ background: #202024;
+ border: 1px solid $border;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ font-weight: 700;
+ color: $text-primary;
+}
+
+.userInfo {
+ display: flex;
+ flex-direction: column;
+ flex: 1;
+ min-width: 0;
+
+ strong {
+  font-size: 0.85rem;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+ }
+
+ span {
+  font-size: 0.7rem;
+  color: $text-secondary;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+ }
+}
+
+.logoutBtn {
+ background: transparent;
+ border: none;
+ color: $text-secondary;
+ cursor: pointer;
+ padding: 8px;
+ border-radius: 8px;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ transition: all 0.2s;
+
+ &:hover {
+  background: rgba($danger, 0.1);
+  color: $danger;
+ }
+}
+
+.loadingUser {
+ display: flex;
+ align-items: center;
+ gap: 1rem;
+ opacity: 0.5;
+
+ .skeletonAvatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #202024;
+ }
+
+ .skeletonText {
+  height: 12px;
+  flex: 1;
+  background: #202024;
+  border-radius: 4px;
+ }
+}
+
+@media (max-width: 1024px) {
+ .sidebarContainer {
+  display: none;
+ }
+}

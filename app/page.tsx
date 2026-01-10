@@ -1,745 +1,769 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, query, onSnapshot, orderBy, addDoc, updateDoc, doc } from 'firebase/firestore';
-import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { ArrowRight, LayoutDashboard, Plus, TrendingUp, TrendingDown, X, Target, DollarSign } from 'lucide-react';
-import Image from 'next/image';
+import React, { useState, useEffect, useMemo } from "react";
+import {
+  ArrowUpCircle,
+  ArrowDownCircle,
+  Search,
+  Plus,
+  Calendar,
+  Wallet,
+  ShoppingBag,
+  Home as HomeIcon,
+  Zap,
+  AlertCircle,
+  X,
+  Lightbulb,
+  Eye,
+  EyeOff,
+  // Ícones Categorias
+  Pizza,
+  CarFront,
+  Clapperboard,
+  HeartPulse,
+  BookOpen,
+  Banknote,
+  TrendingUp,
+  Package,
+  CreditCard,
+  PartyPopper,
+  Plane,
+  Gamepad2,
+  Gift,
+  Smartphone,
+  Globe,
+  Droplet,
+  Flame,
+} from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { onAuthStateChanged, User } from "firebase/auth";
+import {
+  collection,
+  query,
+  onSnapshot,
+  orderBy,
+  addDoc,
+  updateDoc,
+  doc,
+} from "firebase/firestore";
+import { auth, db } from "./lib/firebase";
+import { Sidebar } from "./components/Sidebar/Sidebar";
+import { motion, AnimatePresence } from "framer-motion";
 
-import Header from './components/Header/Header';
-import PieChartCard from './components/PieChartCard/PieChartCard';
-import { db, auth } from './lib/firebase';
+import styles from "./HomePage.module.scss";
 
-// Interfaces
-import { Transaction } from './components/TransactionsTable/TransactionsTable';
-import { Goal } from './components/Goals/Goals';
+// --- CONFIGURAÇÃO ---
+export const transactionCategories = [
+  { value: "Alimentação", label: "Alimentação", icon: Pizza },
+  { value: "Transporte", label: "Transporte", icon: CarFront },
+  { value: "Compras", label: "Compras", icon: ShoppingBag },
+  { value: "Entretenimento", label: "Entretenimento", icon: Clapperboard },
+  { value: "Saúde", label: "Saúde", icon: HeartPulse },
+  { value: "Educação", label: "Educação", icon: BookOpen },
+  { value: "Salário", label: "Salário", icon: Banknote },
+  { value: "Investimentos", label: "Investimentos", icon: TrendingUp },
+  { value: "Outros", label: "Outros", icon: Package },
+  { value: "Cartão de Crédito", label: "Cartão de Crédito", icon: CreditCard },
+  { value: "Lazer", label: "Lazer", icon: PartyPopper },
+  { value: "Moradia", label: "Moradia", icon: HomeIcon },
+  { value: "Viagem", label: "Viagem", icon: Plane },
+  { value: "Jogos", label: "Jogos", icon: Gamepad2 },
+  { value: "Presente", label: "Presente", icon: Gift },
+  { value: "Celular", label: "Celular", icon: Smartphone },
+  { value: "Internet", label: "Internet", icon: Globe },
+  { value: "Água", label: "Água", icon: Droplet },
+  { value: "Luz", label: "Luz", icon: Lightbulb },
+  { value: "Gás", label: "Gás", icon: Flame },
+];
 
-// Componentes da Página
-import RecentActivity from './components/RecentActivity/RecentActivity';
-import GoalsPreview from './components/GoalsPreview/GoalsPreview';
+interface Transaction {
+  id: string;
+  description: string;
+  amount: number;
+  category: string;
+  type: "income" | "expense";
+  date: any;
+}
 
-// Importar o SettingsContext
-import { useSettings } from './contexts/SettingsContext';
+interface Goal {
+  id: string;
+  title: string;
+  targetAmount: number;
+  currentAmount: number;
+  emoji: string;
+  isCompleted: boolean;
+}
 
-import styles from './HomePage.module.scss';
+const COLORS = [
+  "#8257e5",
+  "#00B37E",
+  "#FBA94C",
+  "#FF669D",
+  "#0088FE",
+  "#6AD2FF",
+];
 
-// Sistema de dicas do dia
 const DAILY_TIPS = [
   {
     id: 1,
-    emoji: '💡',
-    text: 'Separe automaticamente 10% do que receber para investir. Considere CDBs de liquidez diária para emergências.',
-    category: 'Investimento'
+    text: "Separe 10% do que receber assim que cair na conta.",
+    category: "Investimento",
   },
   {
     id: 2,
-    emoji: '📊',
-    text: 'Revise seus gastos semanais. Pequenas economias diárias podem fazer grande diferença no final do mês.',
-    category: 'Economia'
+    text: "Revise seus gastos semanalmente para identificar gargalos.",
+    category: "Economia",
   },
   {
     id: 3,
-    emoji: '🎯',
-    text: 'Estabeleça metas realistas. Metas muito ambiciosas podem desmotivar, enquanto metas pequenas demais não trazem crescimento.',
-    category: 'Metas'
+    text: "Metas claras aceleram a conquista de objetivos.",
+    category: "Metas",
   },
-  {
-    id: 4,
-    emoji: '🔄',
-    text: 'Automátize suas finanças. Configure transferências automáticas para investimentos e contas de poupança.',
-    category: 'Automação'
-  },
-  {
-    id: 5,
-    emoji: '🧮',
-    text: 'Use a regra 50-30-20: 50% para necessidades, 30% para desejos e 20% para poupança e investimentos.',
-    category: 'Orçamento'
-  },
-  {
-    id: 6,
-    emoji: '🚨',
-    text: 'Mantenha uma reserva de emergência de 3 a 6 meses do seu custo de vida em aplicações de fácil acesso.',
-    category: 'Segurança'
-  },
-  {
-    id: 7,
-    emoji: '📱',
-    text: 'Use apps de controle financeiro para acompanhar seus gastos em tempo real e identificar padrões.',
-    category: 'Tecnologia'
-  },
-  {
-    id: 8,
-    emoji: '💳',
-    text: 'Evite dívidas no cartão de crédito. Se usar, pague o total da fatura para não acumular juros.',
-    category: 'Crédito'
-  },
-  {
-    id: 9,
-    emoji: '📈',
-    text: 'Diversifique seus investimentos. Não coloque todos os ovos na mesma cesta para reduzir riscos.',
-    category: 'Investimento'
-  },
-  {
-    id: 10,
-    emoji: '🛒',
-    text: 'Faça uma lista antes de ir ao mercado e evite compras por impulso. Isso pode reduzir seus gastos em até 30%.',
-    category: 'Consumo'
-  },
-  {
-    id: 11,
-    emoji: '🎉',
-    text: 'Comemore pequenas conquistas financeiras! Isso ajuda a manter a motivação no controle das finanças.',
-    category: 'Motivação'
-  },
-  {
-    id: 12,
-    emoji: '📚',
-    text: 'Invista em educação financeira. Conhecimento é o melhor investimento que você pode fazer.',
-    category: 'Educação'
-  },
-  {
-    id: 13,
-    emoji: '⏰',
-    text: 'O tempo é seu maior aliado nos investimentos. Comece cedo a aproveite os juros compostos.',
-    category: 'Investimento'
-  },
-  {
-    id: 14,
-    emoji: '🔍',
-    text: 'Revise assinaturas mensais. Muitas vezes pagamos por serviços que não usamos mais.',
-    category: 'Economia'
-  },
-  {
-    id: 15,
-    emoji: '🎯',
-    text: 'Estabeleça metas SMART: Específicas, Mensuráveis, Atingíveis, Relevantes e Temporais.',
-    category: 'Metas'
-  }
 ];
 
-const getRandomTip = () => {
-  const randomIndex = Math.floor(Math.random() * DAILY_TIPS.length);
-  return DAILY_TIPS[randomIndex];
-};
-
-const getInitials = (name: string | null | undefined): string => {
-  if (!name) return 'U';
-  const names = name.split(' ');
-  const initials = names.map(n => n[0]).join('');
-  return initials.substring(0, 2).toUpperCase();
-};
-
-const getGreeting = () => {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Bom dia';
-  if (hour < 18) return 'Boa tarde';
-  return 'Boa noite';
-};
-
-// Lista de emojis para o select
 const EMOJI_OPTIONS = [
-  { value: '🏠', label: 'Casa' },
-  { value: '🚗', label: 'Carro' },
-  { value: '✈️', label: 'Viagem' },
-  { value: '🎓', label: 'Educação' },
-  { value: '💍', label: 'Casamento' },
-  { value: '📱', label: 'Tecnologia' },
-  { value: '🏥', label: 'Saúde' },
-  { value: '🎮', label: 'Entretenimento' },
-  { value: '👶', label: 'Família' },
-  { value: '💼', label: 'Negócios' },
-  { value: '🎯', label: 'Objetivo' },
-  { value: '💰', label: 'Dinheiro' },
-  { value: '🏖️', label: 'Férias' },
-  { value: '🎁', label: 'Presente' },
-  { value: '📈', label: 'Investimentos' }
+  "🏠",
+  "🚗",
+  "✈️",
+  "🎓",
+  "💍",
+  "💻",
+  "🏥",
+  "🎮",
+  "👶",
+  "💼",
+  "🎯",
+  "💰",
 ];
 
-const QuickActionButton = ({ href, icon: Icon, title, description }: any) => (
-  <motion.div
-    whileHover={{ y: -5, scale: 1.03 }}
-    transition={{ type: 'spring', stiffness: 300 }}
-  >
-    <Link href={href} className={styles.actionCard}>
-      <div className={styles.actionIconWrapper}>
-        <Icon size={22} />
-      </div>
-      <div className={styles.hoverInfo}>
-        <h4 className={styles.actionTitle}>{title}</h4>
-        <p className={styles.actionDescription}>{description}</p>
-      </div>
-    </Link>
-  </motion.div>
-);
-
-// Componente de Dica do Dia
-const DailyTip = () => {
-  const [currentTip, setCurrentTip] = useState(getRandomTip());
-  const [isVisible, setIsVisible] = useState(true);
-
-  const handleNewTip = () => {
-    setIsVisible(false);
-    setTimeout(() => {
-      setCurrentTip(getRandomTip());
-      setIsVisible(true);
-    }, 300);
-  };
-
-  return (
-    <motion.div 
-      className={styles.tipCard}
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-    >
-      <div className={styles.tipHeader}>
-        <span className={styles.tipEmoji}>{currentTip.emoji}</span>
-        <div className={styles.tipTitle}>
-          <strong>Dica do dia</strong>
-          <span className={styles.tipCategory}>{currentTip.category}</span>
-        </div>
-        <motion.button 
-          className={styles.newTipButton}
-          onClick={handleNewTip}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          title="Nova dica"
-        >
-          🔄
-        </motion.button>
-      </div>
-      <motion.p
-        key={currentTip.id}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.1 }}
-        className={styles.tipText}
-      >
-        {currentTip.text}
-      </motion.p>
-    </motion.div>
+const formatMoney = (value: number) =>
+  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
+    value
   );
+
+const getDynamicGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12)
+    return {
+      text: "Bom dia",
+      icon: "☀️",
+      subtext: "Comece o dia com o pé direito.",
+    };
+  if (hour >= 12 && hour < 18)
+    return {
+      text: "Boa tarde",
+      icon: "🌤️",
+      subtext: "Mantenha o foco nos seus objetivos.",
+    };
+  return {
+    text: "Boa noite",
+    icon: "🌙",
+    subtext: "Hora de ver como foi o seu dia.",
+  };
 };
 
-const HeroSection = ({ 
-  user, 
-  totalBalance, 
-  income, 
-  expense, 
-  currency 
-}: { 
-  user: User; 
-  totalBalance: number; 
-  income: number; 
-  expense: number;
-  currency: string;
-}) => {
-  const heroRef = useRef<HTMLElement>(null);
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLElement>) => {
-    if (!heroRef.current) return;
-    const rect = heroRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    heroRef.current.style.setProperty('--mouse-x', `${x}px`);
-    heroRef.current.style.setProperty('--mouse-y', `${y}px`);
-  };
-
-  // Função para formatar valores com a moeda configurada
-  const formatCurrency = (value: number): string => {
-    return value.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
-  };
-
-  return (
-    <motion.section 
-      ref={heroRef}
-      onMouseMove={handleMouseMove}
-      className={styles.hero}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: "easeOut" }}
-    >
-      <div className={styles.heroGreeting}>
-        <div className={styles.heroAvatarContainer}>
-          {user.photoURL ? (
-            <Image src={user.photoURL} alt="Foto do usuário" width={56} height={56} className={styles.avatarImage} />
-          ) : (
-            <div className={styles.avatarFallback}>{getInitials(user.displayName)}</div>
-          )}
-        </div>
-        <div className={styles.heroContent}>
-          <h1 className={styles.heroTitle}>
-            {getGreeting()}, {user.displayName || 'Usuário'}!
-            <motion.span 
-              className={styles.wavingHand} 
-              animate={{ rotate: [0, 14, -8, 14, 0] }} 
-              transition={{ duration: 2, ease: "easeInOut", repeat: Infinity, repeatDelay: 4 }}
-            >
-              👋
-            </motion.span>
-          </h1>
-          <p className={styles.heroSubtitle}>
-            Seja bem-vindo(a) de volta ao seu painel financeiro.
-          </p>
-        </div>
-      </div>
-
-      <div className={styles.heroBalance}>
-        <div className={styles.balanceLabel}>Seu Saldo Atual</div>
-        <h2 className={styles.balanceValue}>
-          {Number.isFinite(totalBalance) ? formatCurrency(totalBalance) : formatCurrency(0)}
-        </h2>
-        <div className={styles.miniBalanceRow}>
-          <div className={styles.miniBalanceCard}>
-            <TrendingUp size={16} color="var(--positive)" />
-            <div className={styles.cardValuePositive}>
-              {formatCurrency(income)}
-            </div>
-          </div>
-          <div className={styles.miniBalanceCard}>
-            <TrendingDown size={16} color="var(--negative)" />
-            <div className={styles.cardValueNegative}>
-              {formatCurrency(expense)}
-            </div>
-          </div>
-        </div>
-      </div>
-    </motion.section>
-  );
+const renderCategoryIcon = (categoryName: string, size: number = 18) => {
+  const normalizedName = categoryName || "Outros";
+  const found = transactionCategories.find((c) => c.value === normalizedName);
+  const IconComponent = found ? found.icon : Package;
+  return <IconComponent size={size} />;
 };
 
-// Componentes de Modal atualizados
-const NewGoalModal = ({ 
-  isOpen, 
-  onClose, 
-  onGoalCreated,
-  currency 
-}: { 
-  isOpen: boolean; 
-  onClose: () => void; 
-  onGoalCreated: (goal: Goal) => void;
-  currency: string;
+// --- MODAIS ---
+const NewGoalModal = ({
+  isOpen,
+  onClose,
+  user,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  user: User | null;
 }) => {
-  const [title, setTitle] = useState('');
-  const [targetAmount, setTargetAmount] = useState('');
-  const [emoji, setEmoji] = useState('🎯');
+  const [title, setTitle] = useState("");
+  const [targetAmount, setTargetAmount] = useState("");
+  const [emoji, setEmoji] = useState("🎯");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !targetAmount || !auth.currentUser) return;
-
+    if (!title || !targetAmount || !user) return;
     setLoading(true);
     try {
-      const goalData = {
+      await addDoc(collection(db, "users", user.uid, "goals"), {
         title,
         targetAmount: parseFloat(targetAmount),
         currentAmount: 0,
         emoji,
         isCompleted: false,
-        createdAt: new Date()
-      };
-
-      const docRef = await addDoc(collection(db, `users/${auth.currentUser.uid}/goals`), goalData);
-      onGoalCreated({ id: docRef.id, ...goalData });
-      setTitle('');
-      setTargetAmount('');
-      setEmoji('🎯');
+        createdAt: new Date(),
+      });
       onClose();
+      setTitle("");
+      setTargetAmount("");
     } catch (error) {
-      console.error('Erro ao criar meta:', error);
+      console.error(error);
     } finally {
       setLoading(false);
     }
   };
-
   if (!isOpen) return null;
-
   return (
     <div className={styles.modalOverlay}>
-      <motion.div 
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
         className={styles.modal}
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.9 }}
       >
         <div className={styles.modalHeader}>
-          <h3>Criar Nova Meta</h3>
-          <button onClick={onClose} className={styles.closeButton}>
+          <h3>Nova Meta</h3>
+          <button onClick={onClose}>
             <X size={20} />
           </button>
         </div>
-        
-        <form onSubmit={handleSubmit} className={styles.modalForm}>
-          <div className={styles.formGroup}>
-            <label>Emoji</label>
-            <select
-              value={emoji}
-              onChange={(e) => setEmoji(e.target.value)}
-              className={styles.emojiSelect}
-            >
-              {EMOJI_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.value} {option.label}
-                </option>
-              ))}
-            </select>
+        <form onSubmit={handleSubmit}>
+          <div className={styles.emojiGrid}>
+            {EMOJI_OPTIONS.map((e) => (
+              <button
+                key={e}
+                type="button"
+                onClick={() => setEmoji(e)}
+                className={emoji === e ? styles.selected : ""}
+              >
+                {e}
+              </button>
+            ))}
           </div>
-
-          <div className={styles.formGroup}>
-            <label>Título da Meta</label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ex: Viagem para Europa"
-              required
-            />
-          </div>
-
-          <div className={styles.formGroup}>
-            <label>Valor Desejado ({currency})</label>
-            <input
-              type="number"
-              value={targetAmount}
-              onChange={(e) => setTargetAmount(e.target.value)}
-              placeholder="0,00"
-              min="0"
-              step="0.01"
-              required
-            />
-          </div>
-
-          <div className={styles.modalActions}>
-            <button type="button" onClick={onClose} className={styles.cancelButton}>
-              Cancelar
-            </button>
-            <button type="submit" disabled={loading} className={styles.confirmButton}>
-              {loading ? 'Criando...' : 'Criar Meta'}
-            </button>
-          </div>
+          <input
+            className={styles.inputField}
+            placeholder="Nome da Meta"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+          />
+          <input
+            className={styles.inputField}
+            type="number"
+            placeholder="Valor Alvo (R$)"
+            value={targetAmount}
+            onChange={(e) => setTargetAmount(e.target.value)}
+            required
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className={styles.btnPrimary}
+          >
+            {loading ? "Criando..." : "Criar Meta"}
+          </button>
         </form>
       </motion.div>
     </div>
   );
 };
 
-const AddFundsModal = ({ 
-  isOpen, 
-  onClose, 
-  goalId, 
-  goals, 
-  onFundsAdded,
-  currency 
-}: { 
-  isOpen: boolean; 
-  onClose: () => void; 
-  goalId: string | null; 
-  goals: Goal[];
-  onFundsAdded: () => void;
-  currency: string;
+const AddFundsModal = ({
+  isOpen,
+  onClose,
+  goal,
+  user,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  goal: Goal | null;
+  user: User | null;
 }) => {
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const goal = goals.find(g => g.id === goalId);
-
-  // Função para formatar valores com a moeda configurada
-  const formatCurrency = (value: number): string => {
-    return value.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!amount || !goalId || !auth.currentUser) return;
-
+    if (!amount || !goal || !user) return;
     setLoading(true);
     try {
-      const goalRef = doc(db, `users/${auth.currentUser.uid}/goals`, goalId);
-      const newAmount = goal!.currentAmount + parseFloat(amount);
-      
-      await updateDoc(goalRef, {
+      const valor = parseFloat(amount);
+      const newAmount = goal.currentAmount + valor;
+      await updateDoc(doc(db, "users", user.uid, "goals", goal.id), {
         currentAmount: newAmount,
-        isCompleted: newAmount >= goal!.targetAmount
+        isCompleted: newAmount >= goal.targetAmount,
       });
-
-      // Também criar uma transação de investimento
-      await addDoc(collection(db, `users/${auth.currentUser.uid}/transactions`), {
-        type: 'investment',
-        amount: parseFloat(amount),
-        description: `Investimento na meta: ${goal!.title}`,
-        category: 'Investimentos',
+      await addDoc(collection(db, "users", user.uid, "transactions"), {
+        type: "expense",
+        amount: valor,
+        description: `Investimento: ${goal.title}`,
+        category: "Investimentos",
         date: new Date(),
-        createdAt: new Date()
       });
-
-      setAmount('');
-      onFundsAdded();
       onClose();
+      setAmount("");
     } catch (error) {
-      console.error('Erro ao adicionar fundos:', error);
+      console.error(error);
     } finally {
       setLoading(false);
     }
   };
-
   if (!isOpen || !goal) return null;
-
-  const progress = Math.min((goal.currentAmount / goal.targetAmount) * 100, 100);
-
   return (
     <div className={styles.modalOverlay}>
-      <motion.div 
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
         className={styles.modal}
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.9 }}
       >
         <div className={styles.modalHeader}>
-          <h3>Adicionar Fundos</h3>
-          <button onClick={onClose} className={styles.closeButton}>
+          <h3>Investir em {goal.emoji}</h3>
+          <button onClick={onClose}>
             <X size={20} />
           </button>
         </div>
-        
-        <div className={styles.goalInfo}>
-          <div className={styles.goalHeader}>
-            <span className={styles.emoji}>{goal.emoji}</span>
-            <span className={styles.title}>{goal.title}</span>
-          </div>
-          <div className={styles.progressInfo}>
-            <span>{formatCurrency(goal.currentAmount)} de {formatCurrency(goal.targetAmount)}</span>
-            <span>{progress.toFixed(0)}%</span>
-          </div>
-          <div className={styles.progressBar}>
-            <div 
-              className={styles.progressFill}
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} className={styles.modalForm}>
-          <div className={styles.formGroup}>
-            <label>Valor para Adicionar ({currency})</label>
-            <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0,00"
-              min="0.01"
-              step="0.01"
-              required
-            />
-          </div>
-
-          <div className={styles.modalActions}>
-            <button type="button" onClick={onClose} className={styles.cancelButton}>
-              Cancelar
-            </button>
-            <button type="submit" disabled={loading} className={styles.confirmButton}>
-              {loading ? 'Adicionando...' : 'Adicionar Fundos'}
-            </button>
-          </div>
+        <form onSubmit={handleSubmit}>
+          <input
+            className={styles.inputField}
+            type="number"
+            placeholder="Valor (R$)"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            required
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className={styles.btnPrimary}
+          >
+            {loading ? "Confirmar" : "Confirmar"}
+          </button>
         </form>
       </motion.div>
     </div>
   );
 };
 
-export default function HomePage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
-  const [allGoals, setAllGoals] = useState<Goal[]>([]);
-  const [dashboardData, setDashboardData] = useState<any>({ totalBalance: 0, income: 0, expense: 0 });
-  
-  // Estados para controlar os modais
-  const [isNewGoalModalOpen, setIsNewGoalModalOpen] = useState(false);
-  const [isAddFundsModalOpen, setIsAddFundsModalOpen] = useState(false);
-  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
+// --- COMPONENTE PRINCIPAL ---
 
-  // Obter configurações do usuário
-  const { settings, formatCurrency } = useSettings();
-  const currency = settings.currency || 'BRL';
+export default function Home() {
+  const [user, setUser] = useState<User | null>(null);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const [hiddenCategories, setHiddenCategories] = useState<string[]>([]);
+  const [isGoalModalOpen, setGoalModalOpen] = useState(false);
+  const [isFundsModalOpen, setFundsModalOpen] = useState(false);
+  const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      setLoading(false);
+      if (currentUser) {
+        const qTrans = query(
+          collection(db, "users", currentUser.uid, "transactions"),
+          orderBy("date", "desc")
+        );
+        const unsubTrans = onSnapshot(qTrans, (s) =>
+          setTransactions(
+            s.docs.map((d) => ({ id: d.id, ...d.data() } as Transaction))
+          )
+        );
+        const qGoals = query(collection(db, "users", currentUser.uid, "goals"));
+        const unsubGoals = onSnapshot(qGoals, (s) =>
+          setGoals(s.docs.map((d) => ({ id: d.id, ...d.data() } as Goal)))
+        );
+        setLoading(false);
+        return () => {
+          unsubTrans();
+          unsubGoals();
+        };
+      } else {
+        setTransactions([]);
+        setGoals([]);
+        setLoading(false);
+      }
     });
     return () => unsubscribeAuth();
   }, []);
 
-  useEffect(() => {
-    if (!user) return;
-    
-    const transQuery = query(collection(db, `users/${user.uid}/transactions`), orderBy('date', 'desc'));
-    const unsubTrans = onSnapshot(transQuery, (snapshot) => {
-      const transactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
-      setAllTransactions(transactions);
-
-      const now = new Date();
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-      let totalBalance = 0;
-      let monthlyIncome = 0;
-      let monthlyExpense = 0;
-
-      transactions.forEach(t => {
-        const amount = Number(t.amount) || 0;
-        if (t.type === 'income') {
-          totalBalance += amount;
-        } else {
-          totalBalance -= amount;
-        }
-        const transactionDate = t.date.toDate();
-        if (transactionDate >= startOfMonth) {
-          if (t.type === 'income') monthlyIncome += amount;
-          else monthlyExpense += amount;
-        }
-      });
-      setDashboardData({ totalBalance, income: monthlyIncome, expense: monthlyExpense });
+  const expensesByCategory = useMemo(() => {
+    const expenses = transactions.filter((t) => t.type === "expense");
+    const totals: { [key: string]: number } = {};
+    expenses.forEach((t) => {
+      const cat = t.category || "Outros";
+      totals[cat] = (totals[cat] || 0) + Number(t.amount);
     });
+    return Object.keys(totals)
+      .map((k) => ({ name: k, value: totals[k] }))
+      .sort((a, b) => b.value - a.value);
+  }, [transactions]);
 
-    const goalsQuery = query(collection(db, `users/${user.uid}/goals`));
-    const unsubGoals = onSnapshot(goalsQuery, (snapshot) => {
-      setAllGoals(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Goal)));
-    });
+  const activeData = useMemo(
+    () =>
+      expensesByCategory.filter(
+        (item) => !hiddenCategories.includes(item.name)
+      ),
+    [expensesByCategory, hiddenCategories]
+  );
+  const visibleTotal = activeData.reduce((acc, curr) => acc + curr.value, 0);
 
-    return () => { unsubTrans(); unsubGoals(); };
-  }, [user]);
-
-  const containerVariants = {
-    hidden: { opacity: 1 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
+  const toggleCategory = (name: string) => {
+    setHiddenCategories((prev) =>
+      prev.includes(name) ? prev.filter((c) => c !== name) : [...prev, name]
+    );
   };
 
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: { duration: 0.5, ease: 'easeOut' }
-    }
-  };
+  const { receitas, despesas, saldo } = useMemo(() => {
+    const r = transactions
+      .filter((t) => t.type === "income")
+      .reduce((a, c) => a + Number(c.amount), 0);
+    const d = transactions
+      .filter((t) => t.type === "expense")
+      .reduce((a, c) => a + Number(c.amount), 0);
+    return { receitas: r, despesas: d, saldo: r - d };
+  }, [transactions]);
 
-  const handleGoalCreated = (newGoal: Goal) => {
-    // A lista de metas será atualizada automaticamente pelo onSnapshot
-    setIsNewGoalModalOpen(false);
-  };
+  const filteredTransactions = transactions.filter((t) =>
+    (t.description || "").toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  const mainGoal = goals.find((g) => !g.isCompleted) || goals[0];
+  const greeting = getDynamicGreeting();
 
-  const handleFundsAdded = () => {
-    // A lista de metas será atualizada automaticamente pelo onSnapshot
-    setIsAddFundsModalOpen(false);
-    setSelectedGoalId(null);
-  };
+  // Inicial do nome para o fallback
+  const userInitial = user?.displayName
+    ? user.displayName[0].toUpperCase()
+    : "U";
 
-  if (loading) return <div className={styles.loading}>Carregando...</div>;
-  if (!user) return <div className={styles.loading}>Faça login para ver o dashboard.</div>;
+  if (loading)
+    return (
+      <div className={styles.layoutContainer}>
+        <Sidebar />
+        <main
+          className={styles.mainContent}
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <span>Carregando...</span>
+        </main>
+      </div>
+    );
 
   return (
-    <div className={styles.pageWrap}>
-      <Header />
-      <main className={styles.container}>
-        <HeroSection 
-          user={user} 
-          totalBalance={dashboardData.totalBalance} 
-          income={dashboardData.income} 
-          expense={dashboardData.expense}
-          currency={currency}
-        />
+    <div className={styles.layoutContainer}>
+      <Sidebar />
+      <main className={styles.mainContent}>
+        {/* HEADER COM FOTO E SAUDAÇÃO */}
+        <header className={styles.pageHeader}>
+          <div className={styles.headerLeft}>
+            {/* Lógica da Foto */}
+            <motion.div
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.5 }}
+              className={styles.avatarContainer}
+            >
+              {user?.photoURL ? (
+                <img
+                  src={user.photoURL}
+                  alt="Perfil"
+                  className={styles.profileImage}
+                />
+              ) : (
+                <div className={styles.profileFallback}>{userInitial}</div>
+              )}
+            </motion.div>
 
-        <motion.div 
-          className={styles.mainGrid}
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          <div className={styles.mainColumn}>
-            <motion.section variants={itemVariants}>
-              <h3 className={styles.sectionTitle}>Ações Rápidas</h3>
-              <div className={styles.actionsGrid}>
-                <QuickActionButton href="/dashboard?modal=transaction" icon={Plus} title="Nova Transação" description="Adicione receitas ou despesas"/>
-                <QuickActionButton href="/dashboard" icon={LayoutDashboard} title="Dashboard Completo" description="Visão detalhada e relatórios"/>
-                <QuickActionButton href="/investments" icon={TrendingUp} title="Adicionar Investimento" description="Faça seu dinheiro render"/>
-              </div>
-            </motion.section>
-
-            <motion.section variants={itemVariants}>
-              <div className={styles.sectionHeaderWithLink}>
-                <h3 className={styles.sectionTitle}>Insights do Mês</h3>
-                <Link href="/dashboard" className={styles.sectionLink}>Ver todos <ArrowRight size={14} /></Link>
-              </div>
-              <PieChartCard 
-                transactions={allTransactions} 
-                currency={currency}
-              />
-              <p className={styles.monthInsightText}>
-                {allTransactions.length === 0 ? 'Adicione transações para ver insights.' : 'Continue monitorando seus gastos para atingir suas metas.'}
-              </p>
-              <DailyTip />
-            </motion.section>
+            <div className={styles.headerTexts}>
+              <motion.h1
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5 }}
+                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+              >
+                {greeting.text},{" "}
+                {user?.displayName?.split(" ")[0] || "Visitante"}!
+                <span style={{ fontSize: "1.4rem" }}>{greeting.icon}</span>
+              </motion.h1>
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2, duration: 0.5 }}
+              >
+                {greeting.subtext}
+              </motion.p>
+            </div>
           </div>
 
-          <aside className={styles.sidebarColumn}>
-            <motion.div variants={itemVariants}>
-              <RecentActivity 
-                transactions={allTransactions} 
-                currency={currency}
-              />
-            </motion.div>
-            <motion.div variants={itemVariants}>
-              <GoalsPreview
-                goals={allGoals}
-                currency={currency}
-                onAddNewGoal={() => setIsNewGoalModalOpen(true)}
-                onAddFunds={(goalId) => {
-                  setSelectedGoalId(goalId);
-                  setIsAddFundsModalOpen(true);
+          <div className={styles.dateBadge}>
+            <Calendar size={14} />
+            {new Date().toLocaleDateString("pt-BR", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+            })}
+          </div>
+        </header>
+
+        <div className={styles.bentoGrid}>
+          {/* SALDO */}
+          <div className={`${styles.card} ${styles.cardBalance}`}>
+            <div className={styles.balanceContent}>
+              <h3>Saldo Disponível</h3>
+              <div className={styles.balanceValue}>{formatMoney(saldo)}</div>
+              <div className={styles.statsRow}>
+                <div className={styles.statItem}>
+                  <div className={`${styles.statIcon} ${styles.up}`}>
+                    <ArrowUpCircle size={16} />
+                  </div>
+                  <div className={styles.statTexts}>
+                    <span className={styles.label}>Entradas</span>
+                    <span className={styles.value}>
+                      {formatMoney(receitas)}
+                    </span>
+                  </div>
+                </div>
+                <div className={styles.statItem}>
+                  <div className={`${styles.statIcon} ${styles.down}`}>
+                    <ArrowDownCircle size={16} />
+                  </div>
+                  <div className={styles.statTexts}>
+                    <span className={styles.label}>Saídas</span>
+                    <span className={styles.value}>
+                      {formatMoney(despesas)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* DICA */}
+          <div className={`${styles.card} ${styles.cardTip}`}>
+            <div className={styles.tipHeader}>
+              <div className={styles.tipLabel}>
+                <Lightbulb size={18} color="#FBA94C" /> <span>Dica do Dia</span>
+              </div>
+            </div>
+            <p className={styles.tipText}>{DAILY_TIPS[0].text}</p>
+          </div>
+
+          {/* METAS */}
+          <div className={`${styles.card} ${styles.cardGoals}`}>
+            <div className={styles.goalHeader}>
+              <span>Meta Principal</span>
+              <button
+                className={styles.btnAddGoal}
+                onClick={() => setGoalModalOpen(true)}
+              >
+                <Plus size={14} />
+              </button>
+            </div>
+            {mainGoal ? (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "1rem",
                 }}
-              />
-            </motion.div>
-          </aside>
-        </motion.div>
+              >
+                <div className={styles.goalInfo}>
+                  <h4>
+                    {mainGoal.emoji} {mainGoal.title}
+                  </h4>
+                </div>
+                <div className={styles.progressContainer}>
+                  <div
+                    className={styles.bar}
+                    style={{
+                      width: `${Math.min(
+                        (mainGoal.currentAmount / mainGoal.targetAmount) * 100,
+                        100
+                      )}%`,
+                    }}
+                  ></div>
+                </div>
+                <div className={styles.goalFooter}>
+                  <span>
+                    {formatMoney(mainGoal.currentAmount)} /{" "}
+                    {formatMoney(mainGoal.targetAmount)}
+                  </span>
+                  <button
+                    className={styles.btnInvest}
+                    onClick={() => {
+                      setSelectedGoal(mainGoal);
+                      setFundsModalOpen(true);
+                    }}
+                  >
+                    Investir
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div
+                className={styles.emptyGoal}
+                onClick={() => setGoalModalOpen(true)}
+              >
+                Nova Meta +
+              </div>
+            )}
+          </div>
+
+          {/* GRÁFICO */}
+          <div className={`${styles.card} ${styles.cardChart}`}>
+            <div className={styles.chartHeader}>
+              <h3>Gastos por Categoria</h3>
+            </div>
+            {expensesByCategory.length > 0 ? (
+              <div className={styles.chartContent}>
+                <div className={styles.pieWrapper}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={activeData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        cornerRadius={5}
+                        dataKey="value"
+                        stroke="none"
+                      >
+                        {activeData.map((entry, index) => {
+                          const originalIndex = expensesByCategory.findIndex(
+                            (e) => e.name === entry.name
+                          );
+                          return (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={COLORS[originalIndex % COLORS.length]}
+                            />
+                          );
+                        })}
+                      </Pie>
+                      <Tooltip
+                        cursor={false}
+                        contentStyle={{
+                          background: "#121214",
+                          border: "1px solid #202024",
+                          borderRadius: "8px",
+                          color: "#fff",
+                        }}
+                        formatter={(val: number) => formatMoney(val)}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className={styles.centerLabel}>
+                    <span>Total</span>
+                    <strong>{formatMoney(visibleTotal)}</strong>
+                  </div>
+                </div>
+                <div className={styles.interactiveLegend}>
+                  {expensesByCategory.map((entry, index) => {
+                    const isHidden = hiddenCategories.includes(entry.name);
+                    return (
+                      <div
+                        key={index}
+                        className={`${styles.legendRow} ${
+                          isHidden ? styles.hidden : ""
+                        }`}
+                        onClick={() => toggleCategory(entry.name)}
+                      >
+                        <div className={styles.legendLeft}>
+                          <div
+                            className={styles.dot}
+                            style={{
+                              background: isHidden
+                                ? "#333"
+                                : COLORS[index % COLORS.length],
+                            }}
+                          />
+                          <span
+                            style={{
+                              marginRight: "8px",
+                              display: "flex",
+                              alignItems: "center",
+                              color: "#7C7C8A",
+                            }}
+                          >
+                            {renderCategoryIcon(entry.name, 16)}
+                          </span>
+                          <span className={styles.catName}>{entry.name}</span>
+                        </div>
+                        <div className={styles.legendRight}>
+                          <span>{formatMoney(entry.value)}</span>
+                          {isHidden ? (
+                            <EyeOff size={14} className={styles.eyeIcon} />
+                          ) : (
+                            <Eye size={14} className={styles.eyeIcon} />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className={styles.emptyState}>Sem dados</div>
+            )}
+          </div>
+
+          {/* TRANSAÇÕES */}
+          <div className={`${styles.card} ${styles.cardTransactions}`}>
+            <div className={styles.tHeader}>
+              <h3>Histórico</h3>
+              <div className={styles.searchContainer}>
+                <Search className={styles.searchIcon} size={14} />
+                <input
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Filtrar..."
+                />
+              </div>
+            </div>
+            <div className={styles.tList}>
+              {filteredTransactions.map((t) => (
+                <div key={t.id} className={styles.tItem}>
+                  <div className={styles.tIcon}>
+                    {renderCategoryIcon(t.category)}
+                  </div>
+                  <div className={styles.tContent}>
+                    <span className={styles.desc}>{t.description}</span>
+                    <span className={styles.cat}>
+                      {t.date?.seconds
+                        ? new Date(t.date.seconds * 1000).toLocaleDateString()
+                        : "-"}
+                    </span>
+                  </div>
+                  <span
+                    className={`${styles.tAmount} ${
+                      t.type === "income" ? styles.inc : styles.exp
+                    }`}
+                  >
+                    {t.type === "income" ? "+" : "-"} {formatMoney(t.amount)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </main>
 
-      {/* Modais */}
-      <NewGoalModal 
-        isOpen={isNewGoalModalOpen}
-        onClose={() => setIsNewGoalModalOpen(false)}
-        onGoalCreated={handleGoalCreated}
-        currency={currency}
-      />
-      
-      <AddFundsModal
-        isOpen={isAddFundsModalOpen}
-        onClose={() => {
-          setIsAddFundsModalOpen(false);
-          setSelectedGoalId(null);
-        }}
-        goalId={selectedGoalId}
-        goals={allGoals}
-        currency={currency}
-        onFundsAdded={handleFundsAdded}
-      />
+      <AnimatePresence>
+        {isGoalModalOpen && (
+          <NewGoalModal
+            isOpen={isGoalModalOpen}
+            onClose={() => setGoalModalOpen(false)}
+            user={user}
+          />
+        )}
+        {isFundsModalOpen && (
+          <AddFundsModal
+            isOpen={isFundsModalOpen}
+            onClose={() => setFundsModalOpen(false)}
+            goal={selectedGoal}
+            user={user}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
