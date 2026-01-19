@@ -45,6 +45,7 @@ import {
   addDoc,
   updateDoc,
   doc,
+  getDoc,
 } from "firebase/firestore";
 import { auth, db } from "./lib/firebase";
 import Header from "./components/Header/Header";
@@ -95,6 +96,15 @@ interface Goal {
   isCompleted: boolean;
 }
 
+// Interface para dados do usuário do Firestore
+interface UserData {
+  photoURL?: string;
+  displayName?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+}
+
 const COLORS = [
   "#8257e5",
   "#00B37E",
@@ -139,7 +149,7 @@ const EMOJI_OPTIONS = [
 
 const formatMoney = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
-    value
+    value,
   );
 
 const getDynamicGreeting = () => {
@@ -341,32 +351,94 @@ const AddFundsModal = ({
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [userPhotoUrl, setUserPhotoUrl] = useState<string | null>(null);
 
   const [hiddenCategories, setHiddenCategories] = useState<string[]>([]);
   const [isGoalModalOpen, setGoalModalOpen] = useState(false);
   const [isFundsModalOpen, setFundsModalOpen] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
 
+  // Buscar dados do usuário do Firestore
+  const fetchUserData = async (uid: string) => {
+    try {
+      const userDocRef = doc(db, "users", uid);
+      const userDocSnap = await getDoc(userDocRef);
+
+      if (userDocSnap.exists()) {
+        const data = userDocSnap.data() as UserData;
+        setUserData(data);
+
+        // Prioridade: Firestore photoURL > Auth photoURL
+        if (data.photoURL) {
+          console.log(
+            "Usando foto do Firestore (base64):",
+            data.photoURL.substring(0, 50) + "...",
+          );
+          setUserPhotoUrl(data.photoURL);
+        } else {
+          // Se não tiver no Firestore, tenta pegar do Auth
+          const authUser = auth.currentUser;
+          if (authUser?.photoURL) {
+            console.log("Usando foto do Auth:", authUser.photoURL);
+            setUserPhotoUrl(authUser.photoURL);
+          } else {
+            setUserPhotoUrl(null);
+          }
+        }
+      } else {
+        setUserData(null);
+        const authUser = auth.currentUser;
+        setUserPhotoUrl(authUser?.photoURL || null);
+      }
+    } catch (error) {
+      console.error("Erro ao buscar dados do usuário:", error);
+      setUserData(null);
+      const authUser = auth.currentUser;
+      setUserPhotoUrl(authUser?.photoURL || null);
+    }
+  };
+
+  // Escutar mudanças no perfil do usuário
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+    const handleProfileUpdate = () => {
+      if (user?.uid) {
+        console.log("Perfil atualizado, buscando novos dados...");
+        fetchUserData(user.uid);
+      }
+    };
+
+    window.addEventListener("userProfileUpdated", handleProfileUpdate);
+
+    return () => {
+      window.removeEventListener("userProfileUpdated", handleProfileUpdate);
+    };
+  }, [user]);
+
+  useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+      console.log("Auth state changed:", currentUser?.uid);
       setUser(currentUser);
       if (currentUser) {
+        // Buscar dados do usuário do Firestore
+        await fetchUserData(currentUser.uid);
+
         const qTrans = query(
           collection(db, "users", currentUser.uid, "transactions"),
-          orderBy("date", "desc")
+          orderBy("date", "desc"),
         );
         const unsubTrans = onSnapshot(qTrans, (s) =>
           setTransactions(
-            s.docs.map((d) => ({ id: d.id, ...d.data() } as Transaction))
-          )
+            s.docs.map((d) => ({ id: d.id, ...d.data() }) as Transaction),
+          ),
         );
         const qGoals = query(collection(db, "users", currentUser.uid, "goals"));
         const unsubGoals = onSnapshot(qGoals, (s) =>
-          setGoals(s.docs.map((d) => ({ id: d.id, ...d.data() } as Goal)))
+          setGoals(s.docs.map((d) => ({ id: d.id, ...d.data() }) as Goal)),
         );
         setLoading(false);
         return () => {
@@ -376,6 +448,8 @@ export default function Home() {
       } else {
         setTransactions([]);
         setGoals([]);
+        setUserData(null);
+        setUserPhotoUrl(null);
         setLoading(false);
       }
     });
@@ -397,15 +471,15 @@ export default function Home() {
   const activeData = useMemo(
     () =>
       expensesByCategory.filter(
-        (item) => !hiddenCategories.includes(item.name)
+        (item) => !hiddenCategories.includes(item.name),
       ),
-    [expensesByCategory, hiddenCategories]
+    [expensesByCategory, hiddenCategories],
   );
   const visibleTotal = activeData.reduce((acc, curr) => acc + curr.value, 0);
 
   const toggleCategory = (name: string) => {
     setHiddenCategories((prev) =>
-      prev.includes(name) ? prev.filter((c) => c !== name) : [...prev, name]
+      prev.includes(name) ? prev.filter((c) => c !== name) : [...prev, name],
     );
   };
 
@@ -420,14 +494,19 @@ export default function Home() {
   }, [transactions]);
 
   const filteredTransactions = transactions.filter((t) =>
-    (t.description || "").toLowerCase().includes(searchTerm.toLowerCase())
+    (t.description || "").toLowerCase().includes(searchTerm.toLowerCase()),
   );
   const mainGoal = goals.find((g) => !g.isCompleted) || goals[0];
   const greeting = getDynamicGreeting();
 
-  const userInitial = user?.displayName
-    ? user.displayName[0].toUpperCase()
-    : "U";
+  const getUserDisplayName = () => {
+    return userData?.displayName || user?.displayName || "Usuário";
+  };
+
+  const getUserInitial = () => {
+    const name = getUserDisplayName();
+    return name.charAt(0).toUpperCase();
+  };
 
   const handleOpenFunds = (goal: Goal) => {
     setSelectedGoal(goal);
@@ -476,14 +555,32 @@ export default function Home() {
                 transition={{ duration: 0.5 }}
                 className={styles.avatarContainer}
               >
-                {user?.photoURL ? (
+                {userPhotoUrl ? (
                   <img
-                    src={user.photoURL}
+                    src={userPhotoUrl}
                     alt="Perfil"
                     className={styles.profileImage}
+                    onError={(e) => {
+                      // Fallback se a imagem não carregar
+                      console.error("Erro ao carregar imagem:", userPhotoUrl);
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = "none";
+                      const parent = target.parentElement;
+                      if (parent) {
+                        const fallback = document.createElement("div");
+                        fallback.className = styles.profileFallback;
+                        fallback.textContent = getUserInitial();
+                        parent.appendChild(fallback);
+                      }
+                    }}
+                    onLoad={() => {
+                      console.log("Imagem carregada com sucesso na Home");
+                    }}
                   />
                 ) : (
-                  <div className={styles.profileFallback}>{userInitial}</div>
+                  <div className={styles.profileFallback}>
+                    {getUserInitial()}
+                  </div>
                 )}
               </motion.div>
 
@@ -495,7 +592,7 @@ export default function Home() {
                   style={{ display: "flex", alignItems: "center", gap: "8px" }}
                 >
                   {greeting.text},{" "}
-                  {user?.displayName?.split(" ")[0] || "Visitante"}!
+                  {getUserDisplayName().split(" ")[0] || "Visitante"}!
                   <span style={{ fontSize: "1.4rem" }}>{greeting.icon}</span>
                 </motion.h1>
                 <motion.p
@@ -593,7 +690,7 @@ export default function Home() {
                         width: `${Math.min(
                           (mainGoal.currentAmount / mainGoal.targetAmount) *
                             100,
-                          100
+                          100,
                         )}%`,
                       }}
                     ></div>
@@ -645,7 +742,7 @@ export default function Home() {
                         >
                           {activeData.map((entry, index) => {
                             const originalIndex = expensesByCategory.findIndex(
-                              (e) => e.name === entry.name
+                              (e) => e.name === entry.name,
                             );
                             return (
                               <Cell
