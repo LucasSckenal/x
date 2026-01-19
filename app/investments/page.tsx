@@ -43,6 +43,7 @@ import { db, auth } from "../lib/firebase";
 import { useSettings } from "../contexts/SettingsContext";
 
 import styles from "./Investments.module.scss";
+import { Sidebar } from "../components/Sidebar/Sidebar";
 
 // Interface baseada na estrutura real do Firebase
 interface FirebaseInvestment {
@@ -1235,7 +1236,7 @@ export default function InvestmentsPage() {
   return (
     <div className={styles.pageWrap}>
       <Header />
-
+      <Sidebar />
       <main className={styles.container}>
         {/* Header Section */}
         <motion.section

@@ -1,438 +1,356 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { auth } from '../lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
-import { Bell, Shield, Eye, CreditCard, Globe, Save, X, RotateCcw, Wifi, WifiOff, Cloud } from 'lucide-react';
+import { useSettings, Settings } from '../contexts/SettingsContext'; // Importando do Contexto
+import { Sidebar } from '../components/Sidebar/Sidebar';
 import Header from '../components/Header/Header';
 import CustomSelect from '../components/CustomSelect/CustomSelect';
 import Switch from '../components/Switch/Switch';
-import { useSettings } from '../contexts/SettingsContext';
 import styles from './Settings.module.scss';
+import { 
+  Bell, Shield, Eye, CreditCard, Globe, 
+  Save, AlertTriangle, RotateCcw, Wifi, WifiOff, Download 
+} from 'lucide-react';
+import toast from 'react-hot-toast';
+
+const TABS = [
+  { id: 'general', label: 'Geral', icon: Globe, desc: 'Idioma, moeda e preferências regionais.' },
+  { id: 'appearance', label: 'Aparência', icon: Eye, desc: 'Temas, modo escuro e privacidade visual.' },
+  { id: 'notifications', label: 'Notificações', icon: Bell, desc: 'Alertas de segurança e e-mails.' },
+  { id: 'privacy', label: 'Privacidade', icon: Shield, desc: 'Segurança da conta e compartilhamento.' },
+  { id: 'payments', label: 'Financeiro', icon: CreditCard, desc: 'Padrões de transação e limites.' },
+];
 
 export default function SettingsPage() {
-  const { settings, updateSettings, resetSettings, loading, error } = useSettings();
-  const [user, setUser] = useState<any>(null);
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState({ type: '', text: '' });
-  const [localSettings, setLocalSettings] = useState(settings);
+  const { settings, updateSettings, resetSettings, loading } = useSettings();
+  
+  const [activeTab, setActiveTab] = useState('general');
+  const [localSettings, setLocalSettings] = useState<Settings>(settings);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [saving, setSaving] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
 
-  // Sincronizar com as configurações do context
+  // Sincroniza localSettings quando as configurações globais carregam (ex: ao abrir a página)
   useEffect(() => {
-    if (!loading) {
-      setLocalSettings(settings);
-    }
+    if (!loading) setLocalSettings(settings);
   }, [settings, loading]);
 
-  // Detectar mudanças
+  // Monitor de Conexão
   useEffect(() => {
-    if (!loading) {
-      setHasUnsavedChanges(JSON.stringify(localSettings) !== JSON.stringify(settings));
+    if (typeof window !== 'undefined') {
+      setIsOnline(navigator.onLine);
+      window.addEventListener('online', () => setIsOnline(true));
+      window.addEventListener('offline', () => setIsOnline(false));
     }
+  }, []);
+
+  // Verifica alterações não salvas
+  useEffect(() => {
+    if (loading) return;
+    // Compara removendo lastUpdated para não dar falso positivo
+    const cleanLocal = { ...localSettings, lastUpdated: null };
+    const cleanGlobal = { ...settings, lastUpdated: null };
+    const isDifferent = JSON.stringify(cleanLocal) !== JSON.stringify(cleanGlobal);
+    setHasUnsavedChanges(isDifferent);
   }, [localSettings, settings, loading]);
 
-  // Detectar status de conexão
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+  // Handler Genérico
+  const handleChange = (key: keyof Settings, value: any) => {
+    setLocalSettings(prev => ({ ...prev, [key]: value }));
+  };
 
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  const handleSaveSettings = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = async () => {
     setSaving(true);
-
     try {
-      await updateSettings(localSettings);
-      setMessage({ 
-        type: 'success', 
-        text: user ? 'Configurações salvas na nuvem!' : 'Configurações salvas localmente' 
-      });
-      
-      setTimeout(() => {
-        setMessage({ type: '', text: '' });
-      }, 5000);
-      
-    } catch (error: any) {
-      setMessage({ 
-        type: 'error', 
-        text: `Erro ao salvar: ${error.message}` 
-      });
+      await updateSettings(localSettings); // Chama a função do seu Contexto
+      toast.success("Configurações salvas!");
+      setHasUnsavedChanges(false);
+    } catch (error) {
+      toast.error("Erro ao salvar.");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleSettingChange = (key: keyof typeof settings, value: any) => {
-    setLocalSettings(prev => ({ ...prev, [key]: value }));
-  };
-
-  const handleResetSettings = async () => {
-    if (confirm('Tem certeza que deseja restaurar as configurações padrão? Todas as suas personalizações serão perdidas.')) {
-      try {
-        await resetSettings();
-        setMessage({ type: 'success', text: 'Configurações restauradas para os padrões!' });
-      } catch (error: any) {
-        setMessage({ type: 'error', text: `Erro ao restaurar: ${error.message}` });
-      }
+  const handleDiscard = () => {
+    if(confirm("Descartar alterações não salvas?")) {
+       setLocalSettings(settings);
+       toast("Alterações descartadas", { icon: '↩️' });
     }
   };
 
-  const discardChanges = () => {
-    setLocalSettings(settings);
-    setMessage({ type: 'info', text: 'Alterações descartadas.' });
-  };
+  // Renderização do Conteúdo
+  const renderContent = () => {
+    const bindSelect = (key: keyof Settings) => ({
+      value: localSettings[key],
+      onChange: (val: any) => handleChange(key, val)
+    });
+    
+    const bindSwitch = (key: keyof Settings) => ({
+      checked: localSettings[key] as boolean,
+      onChange: (checked: boolean) => handleChange(key, checked)
+    });
 
-  // Componente de seção de configuração
-  const SettingSection = ({ title, icon: Icon, children }: { 
-    title: string; 
-    icon: any; 
-    children: React.ReactNode;
-  }) => (
-    <div className={styles.section}>
-      <h2 className={styles.sectionTitle}>
-        <Icon size={20} />
-        {title}
-      </h2>
-      <div className={styles.sectionContent}>
-        {children}
-      </div>
-    </div>
-  );
+    const bindInput = (key: keyof Settings, type = "text") => ({
+      value: localSettings[key] as string | number,
+      type,
+      onChange: (e: any) => handleChange(key, type === 'number' ? Number(e.target.value) : e.target.value)
+    });
 
-  // Componente de toggle
-  const ToggleSetting = ({ 
-    label, 
-    description, 
-    value, 
-    onChange 
-  }: { 
-    label: string; 
-    description?: string; 
-    value: boolean; 
-    onChange: (value: boolean) => void;
-  }) => (
-    <div className={styles.toggleGroup}>
-      <div className={styles.toggleInfo}>
-        <label className={styles.toggleLabel}>{label}</label>
-        {description && <p className={styles.toggleDescription}>{description}</p>}
-      </div>
-      <Switch
-        checked={value}
-        onChange={onChange}
-        size="medium"
-      />
-    </div>
-  );
-
-  // Componente de select
-  const SelectSetting = ({ 
-    label, 
-    value, 
-    options, 
-    onChange 
-  }: { 
-    label: string; 
-    value: string; 
-    options: Array<{ value: string; label: string; icon: string }>;
-    onChange: (value: string) => void;
-  }) => (
-    <div className={styles.selectGroup}>
-      <label className={styles.selectLabel}>{label}</label>
-      <CustomSelect
-        options={options}
-        value={value}
-        onChange={onChange}
-        placeholder={`Selecione ${label.toLowerCase()}`}
-      />
-    </div>
-  );
-
-  if (loading) {
-    return (
-      <>
-        <Header />
-        <div className={styles.container}>
-          <div className={styles.loadingState}>
-            <div className={styles.loadingSpinner}></div>
-            <p>Carregando configurações...</p>
-          </div>
-        </div>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <Header />
-      <div className={styles.container}>
-        <div className={styles.header}>
-          <div className={styles.headerTop}>
-            <h1 className={styles.title}>Configurações</h1>
-            <div className={styles.connectionStatus}>
-              {user ? (
-                <div className={`${styles.status} ${isOnline ? styles.online : styles.offline}`}>
-                  {isOnline ? <Wifi size={16} /> : <WifiOff size={16} />}
-                  {isOnline ? 'Sincronizado' : 'Offline'}
-                </div>
-              ) : (
-                <div className={styles.status}>
-                  <Cloud size={16} />
-                  Modo Local
-                </div>
-              )}
+    switch (activeTab) {
+      case "general":
+        return (
+          <>
+            <div className={styles.settingGroup}>
+              <label>Idioma</label>
+              <CustomSelect
+                options={[
+                  { value: "pt-BR", label: "Português (Brasil)" },
+                  { value: "en-US", label: "English (US)" },
+                ]}
+                {...bindSelect("language")}
+              />
             </div>
-          </div>
-          <p className={styles.subtitle}>
-            {user 
-              ? 'Suas configurações são sincronizadas na nuvem' 
-              : 'Faça login para sincronizar entre dispositivos'
-            }
-          </p>
-        </div>
-
-        {error && (
-          <div className={`${styles.message} ${styles.error}`}>
-            <div className={styles.messageContent}>
-              Erro de sincronização: {error}
+            <div className={styles.settingGroup}>
+              <label>Moeda Principal</label>
+              <CustomSelect
+                options={[
+                  { value: "BRL", label: "Real (R$)" },
+                  { value: "USD", label: "Dólar ($)" },
+                  { value: "EUR", label: "Euro (€)" },
+                ]}
+                {...bindSelect("currency")}
+              />
             </div>
-            <button 
-              onClick={() => setMessage({ type: '', text: '' })} 
-              className={styles.closeMessage}
-            >
-              <X size={16} />
-            </button>
-          </div>
-        )}
-
-        {message.text && !error && (
-          <div className={`${styles.message} ${styles[message.type]}`}>
-            <div className={styles.messageContent}>
-              {message.type === 'success' && '✓ '}
-              {message.type === 'error' && '✗ '}
-              {message.type === 'info' && 'ℹ '}
-              {message.text}
+            <div className={styles.settingGroup}>
+              <label>Início da Semana</label>
+              <CustomSelect
+                options={[
+                  { value: "sunday", label: "Domingo" },
+                  { value: "monday", label: "Segunda-feira" },
+                ]}
+                {...bindSelect("startOfWeek")}
+              />
             </div>
-            <button 
-              onClick={() => setMessage({ type: '', text: '' })} 
-              className={styles.closeMessage}
-            >
-              <X size={16} />
-            </button>
-          </div>
-        )}
+          </>
+        );
 
-        <form onSubmit={handleSaveSettings} className={styles.form}>
-          <div className={styles.content}>
-            <SettingSection title="Notificações" icon={Bell}>
-              <ToggleSetting
-                label="Notificações por E-mail"
-                description="Receba atualizações importantes por e-mail"
-                value={localSettings.emailNotifications}
-                onChange={(value) => handleSettingChange('emailNotifications', value)}
-              />
-              <ToggleSetting
-                label="Notificações Push"
-                description="Receba notificações no navegador"
-                value={localSettings.pushNotifications}
-                onChange={(value) => handleSettingChange('pushNotifications', value)}
-              />
-              <ToggleSetting
-                label="Alertas de Transação"
-                description="Seja notificado sobre transações importantes"
-                value={localSettings.transactionAlerts}
-                onChange={(value) => handleSettingChange('transactionAlerts', value)}
-              />
-              <ToggleSetting
-                label="Relatórios Semanais"
-                description="Receba um resumo semanal das suas finanças"
-                value={localSettings.weeklyReports}
-                onChange={(value) => handleSettingChange('weeklyReports', value)}
-              />
-            </SettingSection>
-
-            <SettingSection title="Privacidade" icon={Eye}>
-              <SelectSetting
-                label="Visibilidade do Perfil"
-                value={localSettings.profileVisibility}
+      case "appearance":
+        return (
+          <>
+            <div className={styles.settingGroup}>
+              <label>Tema</label>
+              {/* CORREÇÃO: Adicionada a opção 'system' de volta */}
+              <CustomSelect
                 options={[
-                  { value: 'public', label: 'Público', icon: '🌎' },
-                  { value: 'friends', label: 'Apenas Amigos', icon: '👥' },
-                  { value: 'private', label: 'Privado', icon: '🔒' }
+                  { value: "system", label: "Seguir o Sistema (Auto)" },
+                  { value: "dark", label: "Escuro" },
+                  { value: "light", label: "Claro" },
                 ]}
-                onChange={(value) => handleSettingChange('profileVisibility', value)}
+                {...bindSelect("theme")}
               />
-              <ToggleSetting
-                label="Compartilhamento de Dados Anônimos"
-                description="Ajude a melhorar nossos serviços compartilhando dados anônimos"
-                value={localSettings.dataSharing}
-                onChange={(value) => handleSettingChange('dataSharing', value)}
-              />
-            </SettingSection>
-
-            <SettingSection title="Aparência" icon={Globe}>
-              <SelectSetting
-                label="Tema"
-                value={localSettings.theme}
-                options={[
-                  { value: 'light', label: 'Claro', icon: '🌞' },
-                  { value: 'dark', label: 'Escuro', icon: '🌙' },
-                  { value: 'auto', label: 'Automático', icon: '⚙️' }
-                ]}
-                onChange={(value) => handleSettingChange('theme', value)}
-              />
-              <SelectSetting
-                label="Idioma"
-                value={localSettings.language}
-                options={[
-                  { value: 'pt-BR', label: 'Português (Brasil)', icon: '🇧🇷' },
-                  { value: 'en-US', label: 'English (US)', icon: '🇺🇸' },
-                  { value: 'es-ES', label: 'Español', icon: '🇪🇸' }
-                ]}
-                onChange={(value) => handleSettingChange('language', value)}
-              />
-              <SelectSetting
-                label="Moeda Padrão"
-                value={localSettings.currency}
-                options={[
-                  { value: 'BRL', label: 'Real Brasileiro (R$)', icon: '💰' },
-                  { value: 'USD', label: 'Dólar Americano ($)', icon: '💵' },
-                  { value: 'EUR', label: 'Euro (€)', icon: '💶' }
-                ]}
-                onChange={(value) => handleSettingChange('currency', value)}
-              />
-            </SettingSection>
-
-            <SettingSection title="Segurança" icon={Shield}>
-              <ToggleSetting
-                label="Autenticação de Dois Fatores"
-                description="Aumente a segurança da sua conta"
-                value={localSettings.twoFactorAuth}
-                onChange={(value) => handleSettingChange('twoFactorAuth', value)}
-              />
-              <SelectSetting
-                label="Tempo de Sessão"
-                value={localSettings.sessionTimeout}
-                options={[
-                  { value: '15', label: '15 minutos', icon: '⏱️' },
-                  { value: '30', label: '30 minutos', icon: '⏱️' },
-                  { value: '60', label: '1 hora', icon: '⏱️' },
-                  { value: '120', label: '2 horas', icon: '⏱️' }
-                ]}
-                onChange={(value) => handleSettingChange('sessionTimeout', value)}
-              />
-              <ToggleSetting
-                label="Logout Automático"
-                description="Sair automaticamente após o tempo de sessão"
-                value={localSettings.autoLogout}
-                onChange={(value) => handleSettingChange('autoLogout', value)}
-              />
-            </SettingSection>
-
-            <SettingSection title="Preferências" icon={CreditCard}>
-              <SelectSetting
-                label="Visualização Padrão"
-                value={localSettings.defaultView}
-                options={[
-                  { value: 'dashboard', label: 'Dashboard', icon: '📊' },
-                  { value: 'transactions', label: 'Transações', icon: '💸' },
-                  { value: 'reports', label: 'Relatórios', icon: '📈' }
-                ]}
-                onChange={(value) => handleSettingChange('defaultView', value)}
-              />
-            </SettingSection>
-          </div>
-
-          <div className={styles.footer}>
-            <div className={styles.footerHeader}>
-              {hasUnsavedChanges ? (
-                <div className={styles.unsavedIndicator}>
-                  <div className={styles.unsavedBadge}>
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                      <circle cx="8" cy="8" r="6"/>
-                    </svg>
-                    {user ? 'Alterações não sincronizadas' : 'Alterações locais'}
-                  </div>
-                  <p className={styles.unsavedText}>
-                    {user 
-                      ? 'Suas alterações serão salvas na nuvem e disponíveis em todos os dispositivos.'
-                      : 'Faça login para sincronizar suas configurações entre dispositivos.'
-                    }
-                  </p>
-                </div>
-              ) : (
-                <div className={styles.savedIndicator}>
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                    <path d="M6.5 10.5L3.5 7.5L2.5 8.5L6.5 12.5L13.5 5.5L12.5 4.5L6.5 10.5Z"/>
-                  </svg>
-                  {user ? 'Tudo sincronizado' : 'Configurações salvas localmente'}
-                </div>
-              )}
             </div>
 
-            <div className={styles.footerActions}>
-              <div className={styles.leftActions}>
-                <button 
-                  type="button" 
-                  onClick={handleResetSettings}
-                  className={styles.resetButton}
-                >
-                  <RotateCcw size={16} />
-                  Restaurar Padrões
-                </button>
-                
-                {hasUnsavedChanges && (
-                  <button 
-                    type="button" 
-                    onClick={discardChanges}
-                    className={styles.discardButton}
-                  >
-                    <X size={16} />
-                    Descartar
-                  </button>
-                )}
+            <div className={styles.toggleRow}>
+              <div className={styles.toggleInfo}>
+                <h4>Ocultar Valores (Blur)</h4>
+                <p>Inicia com valores borrados.</p>
               </div>
-              
-              <button 
-                type="submit" 
-                disabled={saving || !hasUnsavedChanges}
-                className={`${styles.saveButton} ${
-                  hasUnsavedChanges ? styles.saveButtonActive : styles.saveButtonInactive
-                }`}
+              <Switch {...bindSwitch("blurValues")} />
+            </div>
+            <div className={styles.toggleRow}>
+              <div className={styles.toggleInfo}>
+                <h4>Modo Compacto</h4>
+                <p>Reduz espaçamentos.</p>
+              </div>
+              <Switch {...bindSwitch("compactMode")} />
+            </div>
+            <div className={styles.toggleRow}>
+              <div className={styles.toggleInfo}>
+                <h4>Reduzir Movimento</h4>
+                <p>Remove animações pesadas.</p>
+              </div>
+              <Switch {...bindSwitch("reducedMotion")} />
+            </div>
+          </>
+        );
+        
+      case "notifications":
+        return (
+          <>
+            <div className={styles.toggleRow}>
+              <div className={styles.toggleInfo}>
+                <h4>Notificações por E-mail</h4>
+                <p>Resumos e alertas.</p>
+              </div>
+              <Switch {...bindSwitch("emailNotifications")} />
+            </div>
+            <div className={styles.toggleRow}>
+              <div className={styles.toggleInfo}>
+                <h4>Alertas de Gastos</h4>
+                <p>Avisar ao exceder orçamento.</p>
+              </div>
+              <Switch {...bindSwitch("spendingAlerts")} />
+            </div>
+            <div className={styles.settingGroup} style={{ marginTop: 20 }}>
+              <label>Lembrete de Contas (Dias antes)</label>
+              <input
+                className={styles.inputField}
+                {...bindInput("billReminderDays", "number")}
+                min="1"
+                max="30"
+                style={{
+                  background: "#0d0e10",
+                  border: "1px solid #333",
+                  color: "white",
+                  padding: 10,
+                  borderRadius: 8,
+                  width: "100%",
+                }}
+              />
+            </div>
+          </>
+        );
+
+      case "privacy":
+        return (
+          <>
+            <div className={styles.toggleRow}>
+              <div className={styles.toggleInfo}>
+                <h4>Compartilhar Dados</h4>
+                <p>Ajuda a melhorar o app.</p>
+              </div>
+              <Switch {...bindSwitch("dataSharing")} />
+            </div>
+            <div className={styles.settingGroup} style={{ marginTop: 20 }}>
+              <label>Tempo de Sessão (Auto-lock)</label>
+              <CustomSelect
+                options={[
+                  { value: "15", label: "15 Minutos" },
+                  { value: "30", label: "30 Minutos" },
+                  { value: "60", label: "1 Hora" },
+                ]}
+                {...bindSelect("sessionTimeout")}
+              />
+            </div>
+            <div className={styles.settingGroup} style={{ marginTop: 30 }}>
+              <button
+                className={styles.navButton}
+                style={{
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  width: "100%",
+                }}
               >
-                {saving ? (
-                  <>
-                    <div className={styles.spinner}></div>
-                    {user ? 'Sincronizando...' : 'Salvando...'}
-                  </>
-                ) : (
-                  <>
-                    <Save size={16} />
-                    {user ? 'Sincronizar' : 'Salvar Local'}
-                    {hasUnsavedChanges && <span className={styles.saveBadge}>•</span>}
-                  </>
-                )}
+                <Download size={16} /> Baixar Meus Dados (CSV)
               </button>
             </div>
+          </>
+        );
+
+      case "payments":
+        return (
+          <>
+            <div className={styles.settingGroup}>
+              <label>Método Padrão</label>
+              <CustomSelect
+                options={[
+                  { value: "credit", label: "Cartão de Crédito" },
+                  { value: "debit", label: "Débito / PIX" },
+                  { value: "cash", label: "Dinheiro" },
+                ]}
+                {...bindSelect("defaultMethod")}
+              />
+            </div>
+            <div className={styles.settingGroup}>
+              <label>Limite Diário de Alerta (R$)</label>
+              <input
+                {...bindInput("dailyLimit", "number")}
+                style={{
+                  background: "#0d0e10",
+                  border: "1px solid #333",
+                  color: "white",
+                  padding: 10,
+                  borderRadius: 8,
+                  width: "100%",
+                }}
+              />
+            </div>
+            <div className={styles.toggleRow}>
+              <div className={styles.toggleInfo}>
+                <h4>Arredondar Valores</h4>
+                <p>Ocultar centavos no dashboard.</p>
+              </div>
+              <Switch {...bindSwitch("roundAmounts")} />
+            </div>
+          </>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  const activeTabInfo = TABS.find(t => t.id === activeTab);
+
+  return (
+    <div className={styles.pageWrapper}>
+      <Sidebar />
+      <div className={styles.contentColumn}>
+        <Header />
+        
+        <main className={styles.settingsContainer}>
+          <div className={styles.pageHeader}>
+            <div>
+              <h1>Configurações</h1>
+              <p>Gerencie suas preferências.</p>
+            </div>
+            <div className={`${styles.statusBadge} ${isOnline ? styles.online : styles.offline}`}>
+              {isOnline ? <Wifi size={14}/> : <WifiOff size={14}/>}
+              {isOnline ? 'Conectado' : 'Offline'}
+            </div>
           </div>
-        </form>
+
+          <div className={styles.settingsLayout}>
+            <nav className={styles.sidebarNav}>
+              {TABS.map(tab => (
+                <button
+                  key={tab.id}
+                  className={`${styles.navButton} ${activeTab === tab.id ? styles.active : ''}`}
+                  onClick={() => setActiveTab(tab.id)}
+                >
+                  <tab.icon size={18} className={styles.navIcon} />
+                  {tab.label}
+                </button>
+              ))}
+              <div style={{height: 20}} />
+              <button className={styles.navButton} onClick={() => { if(confirm("Restaurar?")) resetSettings(); }}>
+                 <RotateCcw size={18} /> Restaurar Padrões
+              </button>
+            </nav>
+
+            <div className={styles.contentArea}>
+              <h2 className={styles.sectionTitle}>{activeTabInfo?.label}</h2>
+              <p className={styles.sectionDesc}>{activeTabInfo?.desc}</p>
+              
+              <div className={styles.formContent}>
+                {loading ? (
+                  <div style={{padding: 40, textAlign: 'center', color: '#666'}}>Carregando...</div>
+                ) : renderContent()}
+              </div>
+            </div>
+          </div>
+        </main>
       </div>
-    </>
+
+      {hasUnsavedChanges && (
+        <div className={styles.actionBar}>
+           <div className={styles.unsavedBadge}><AlertTriangle size={16} /> Não salvo</div>
+           <button className={`${styles.actionBtn} ${styles.discard}`} onClick={handleDiscard}>Descartar</button>
+           <button className={`${styles.actionBtn} ${styles.save}`} onClick={handleSave} disabled={saving}>
+             {saving ? 'Salvando...' : <><Save size={18}/> Salvar Alterações</>}
+           </button>
+        </div>
+      )}
+    </div>
   );
 }

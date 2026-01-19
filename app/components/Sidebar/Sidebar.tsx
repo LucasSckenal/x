@@ -6,13 +6,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { signOut, onAuthStateChanged, User } from "firebase/auth";
 import { auth } from "../../lib/firebase";
 import {
-  Home,
   LayoutDashboard,
   Settings,
   LogOut,
-  User as UserIcon,
-  Wallet,
   TrendingUp,
+  Receipt,
+  Target, // Ícone de Metas
 } from "lucide-react";
 
 import styles from "./Sidebar.module.scss";
@@ -38,103 +37,46 @@ export function Sidebar() {
     }
   };
 
-  // --- GRUPO 1: PRINCIPAL ---
-  const MAIN_ITEMS = [
-    { name: "Visão Geral", path: "/", icon: Home },
-    { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
-    { name: "Carteira", path: "/wallet", icon: Wallet },
+  const NAV_ITEMS = [
+    { name: "Dashboard", path: "/", icon: LayoutDashboard },
+    { name: "Metas", path: "/goals", icon: Target }, // Rota de Metas
+    { name: "Extrato", path: "/transactions", icon: Receipt },
     { name: "Investimentos", path: "/investments", icon: TrendingUp },
-  ];
-
-  // --- GRUPO 2: CONFIGURAÇÕES ---
-  const CONFIG_ITEMS = [
-    { name: "Perfil", path: "/profile", icon: UserIcon },
     { name: "Configurações", path: "/settings", icon: Settings },
   ];
 
-  const userInitial = user?.displayName
-    ? user.displayName[0].toUpperCase()
-    : "U";
-
-  // Função auxiliar para renderizar link
-  const renderLink = (item: (typeof MAIN_ITEMS)[0]) => {
-    const isActive = pathname === item.path;
-    return (
-      <Link
-        key={item.path}
-        href={item.path}
-        className={`${styles.navItem} ${isActive ? styles.active : ""}`}
-      >
-        <item.icon className={styles.navIcon} />
-        <span>{item.name}</span>
-      </Link>
-    );
-  };
-
   return (
     <aside className={styles.sidebarContainer}>
-      {/* LOGO */}
-      <div className={styles.logo}>
-        <span>
-          Orion<span style={{ color: "#8257e5" }}>.App</span>
-        </span>
-      </div>
+      {/* O seu CSS novo não tem container de logo específico. 
+         Se quiser adicionar a logo depois, crie uma div acima do <nav> 
+         e adicione a classe no CSS. Por enquanto, mantive limpo.
+      */}
 
-      {/* NAVEGAÇÃO */}
       <nav className={styles.nav}>
-        {/* Renderiza Grupo Principal */}
-        <div className={styles.navGroup}>
-          <span className={styles.groupLabel}>Menu</span>
-          {MAIN_ITEMS.map(renderLink)}
-        </div>
+        {NAV_ITEMS.map((item) => {
+          const isActive = pathname === item.path;
 
-        {/* --- AQUI ESTÁ A SEPARAÇÃO VISUAL --- */}
-        <div className={styles.separator}></div>
-
-        {/* Renderiza Grupo de Configurações */}
-        <div className={styles.navGroup}>
-          <span className={styles.groupLabel}>Conta</span>
-          {CONFIG_ITEMS.map(renderLink)}
-        </div>
+          return (
+            <Link
+              key={item.path}
+              href={item.path}
+              className={`${styles.navItem} ${isActive ? styles.active : ""}`}
+              title={item.name}
+            >
+              <item.icon className={styles.navIcon} />
+            </Link>
+          );
+        })}
       </nav>
 
-      {/* RODAPÉ DO USUÁRIO */}
       <div className={styles.footer}>
-        {user ? (
-          <div className={styles.userProfile}>
-            {user.photoURL ? (
-              <img
-                src={user.photoURL}
-                alt={user.displayName || "User"}
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <div className={styles.avatarFallback}>{userInitial}</div>
-            )}
-
-            <div className={styles.userInfo}>
-              <strong>{user.displayName?.split(" ")[0] || "Usuário"}</strong>
-              <span title={user.email || ""}>
-                {user.email?.length && user.email.length > 18
-                  ? `${user.email.slice(0, 18)}...`
-                  : user.email}
-              </span>
-            </div>
-
-            <button
-              onClick={handleLogout}
-              className={styles.logoutBtn}
-              title="Sair"
-            >
-              <LogOut size={18} />
-            </button>
-          </div>
-        ) : (
-          <div className={styles.loadingUser}>
-            <div className={styles.skeletonAvatar}></div>
-            <div className={styles.skeletonText}></div>
-          </div>
-        )}
+        <button
+          onClick={handleLogout}
+          className={styles.logoutBtn}
+          title="Sair"
+        >
+          <LogOut size={20} />
+        </button>
       </div>
     </aside>
   );

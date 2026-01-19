@@ -1,17 +1,31 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback } from "react";
 import {
-  Sun, Moon, User, LogOut, Menu, X, Search, Settings, UserCircle, ChevronDown, Bell, Clock, Repeat
-} from 'lucide-react';
-import Link from 'next/link';
-import { onAuthStateChanged } from 'firebase/auth';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { auth, db, loginWithGoogle, logout } from '../../lib/firebase';
-import { motion, AnimatePresence } from 'framer-motion';
-import styles from './Header.module.scss';
+  Sun,
+  Moon,
+  User,
+  LogOut,
+  Menu,
+  X,
+  Search,
+  Settings,
+  UserCircle,
+  ChevronDown,
+  Bell,
+  Clock,
+  Repeat,
+  Wallet,
+} from "lucide-react";
+import Link from "next/link";
+import Image from "next/image";
+import { onAuthStateChanged } from "firebase/auth";
+import { collection, getDocs, query, doc, getDoc } from "firebase/firestore";
+import { auth, db, loginWithGoogle, logout } from "../../lib/firebase";
+import { motion, AnimatePresence } from "framer-motion";
+import styles from "./Header.module.scss";
 
-// Tipos mínimos
+// ----- TIPOS E UTILITÁRIOS -----
 interface FirebaseTransaction {
   id: string;
   description?: string;
@@ -19,20 +33,27 @@ interface FirebaseTransaction {
   category?: string;
   date?: any;
   recurring?: boolean;
-  recurringFrequency?: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  recurringFrequency?: "daily" | "weekly" | "monthly" | "yearly";
   recurringEndDate?: any;
   isActive?: boolean;
   recurringId?: string;
   nextDueDate?: any;
 }
 
-// ----- UTILIDADES DE DATA (mesma ideia do DateUtils) -----
+// Interface para dados do usuário do Firestore
+interface UserData {
+  photoURL?: string;
+  displayName?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+}
+
 const DateUtils = {
   timestampToLocalDate: (timestamp: any): Date => {
     if (!timestamp) return new Date();
     try {
-      // suporta Timestamp do firebase ou string/date
-      if (timestamp.toDate && typeof timestamp.toDate === 'function') {
+      if (timestamp.toDate && typeof timestamp.toDate === "function") {
         const d = timestamp.toDate();
         return new Date(d.getFullYear(), d.getMonth(), d.getDate());
       } else {
@@ -43,13 +64,15 @@ const DateUtils = {
       return new Date(timestamp);
     }
   },
-  formatDateForDisplay: (date: Date) => date.toLocaleDateString('pt-BR'),
-  createDateFromYMD: (y?: number, m?: number, d?: number) => new Date(y || 0, (m || 1) - 1, d || 1),
+  formatDateForDisplay: (date: Date) => date.toLocaleDateString("pt-BR"),
 };
 
-// ----- SERVIÇO DE RECORRÊNCIA (compacto e suficiente para o header) -----
 class RecurringPaymentService {
-  static calculateNextDueDate(startDate: Date, frequency: string, endDate?: Date): Date {
+  static calculateNextDueDate(
+    startDate: Date,
+    frequency: string,
+    endDate?: Date,
+  ): Date {
     const nextDate = new Date(startDate);
     const today = new Date();
     nextDate.setHours(0, 0, 0, 0);
@@ -57,24 +80,27 @@ class RecurringPaymentService {
 
     if (endDate && today > endDate) return endDate;
 
-    // avança até a próxima data no futuro (ou hoje)
     let guard = 0;
     while (nextDate <= today && guard < 1000) {
       guard++;
       switch (frequency) {
-        case 'daily':
+        case "daily":
           nextDate.setDate(nextDate.getDate() + 1);
           break;
-        case 'weekly':
+        case "weekly":
           nextDate.setDate(nextDate.getDate() + 7);
           break;
-        case 'monthly':
+        case "monthly":
           const original = startDate.getDate();
           nextDate.setMonth(nextDate.getMonth() + 1);
-          const lastDay = new Date(nextDate.getFullYear(), nextDate.getMonth() + 1, 0).getDate();
+          const lastDay = new Date(
+            nextDate.getFullYear(),
+            nextDate.getMonth() + 1,
+            0,
+          ).getDate();
           nextDate.setDate(Math.min(original, lastDay));
           break;
-        case 'yearly':
+        case "yearly":
           nextDate.setFullYear(nextDate.getFullYear() + 1);
           break;
         default:
@@ -105,324 +131,376 @@ class RecurringPaymentService {
 
   static formatDueLabel(dueDate: Date) {
     const days = this.getDaysUntilDue(dueDate);
-    if (days === 0) return 'vence hoje';
-    if (days === 1) return 'vence amanhã';
-    if (days < 0) return `vencido há ${Math.abs(days)} dia${Math.abs(days) > 1 ? 's' : ''}`;
-    return `em ${days} dia${days > 1 ? 's' : ''}`;
+    if (days === 0) return "vence hoje";
+    if (days === 1) return "vence amanhã";
+    if (days < 0)
+      return `vencido há ${Math.abs(days)} dia${Math.abs(days) > 1 ? "s" : ""}`;
+    return `em ${days} dia${days > 1 ? "s" : ""}`;
   }
 }
 
-// ----- Header ----- //
+// ----- HEADER ----- //
 export default function Header() {
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [theme, setTheme] = useState<"light" | "dark">("light");
   const [user, setUser] = useState<any>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [userPhotoUrl, setUserPhotoUrl] = useState<string | null>(null);
 
   // notificações
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const panelRef = useRef<HTMLDivElement | null>(null);
-  const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const notificationsRef = useRef<HTMLDivElement | null>(null);
 
-  // fetch transactions do firestore e calcula notificações
+  // Buscar dados do usuário do Firestore
+  const fetchUserData = useCallback(async (uid: string) => {
+    try {
+      const userDocRef = doc(db, "users", uid);
+      const userDocSnap = await getDoc(userDocRef);
+
+      if (userDocSnap.exists()) {
+        const data = userDocSnap.data() as UserData;
+        setUserData(data);
+
+        // Prioridade: Firestore photoURL > Auth photoURL
+        if (data.photoURL) {
+          console.log(
+            "Usando foto do Firestore (base64):",
+            data.photoURL.substring(0, 50) + "...",
+          );
+          setUserPhotoUrl(data.photoURL);
+        } else {
+          // Se não tiver no Firestore, tenta pegar do Auth
+          const authUser = auth.currentUser;
+          if (authUser?.photoURL) {
+            console.log("Usando foto do Auth:", authUser.photoURL);
+            setUserPhotoUrl(authUser.photoURL);
+          } else {
+            setUserPhotoUrl(null);
+          }
+        }
+      } else {
+        setUserData(null);
+        const authUser = auth.currentUser;
+        setUserPhotoUrl(authUser?.photoURL || null);
+      }
+    } catch (error) {
+      console.error("Erro ao buscar dados do usuário:", error);
+      setUserData(null);
+      const authUser = auth.currentUser;
+      setUserPhotoUrl(authUser?.photoURL || null);
+    }
+  }, []);
+
+  // Lógica de Notificações
   const fetchAndComputeNotifications = useCallback(async (uid: string) => {
     try {
       const q = query(collection(db, `users/${uid}/transactions`));
       const snap = await getDocs(q);
-      const txs: FirebaseTransaction[] = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+      const txs: FirebaseTransaction[] = snap.docs.map((d) => ({
+        id: d.id,
+        ...(d.data() as any),
+      }));
 
       const computed: any[] = [];
-
       for (const tx of txs) {
-        try {
-          if (!tx || !tx.recurring || !tx.recurringFrequency || tx.isActive === false) continue;
-          const startDate = tx.date ? DateUtils.timestampToLocalDate(tx.date) : new Date();
-          const endDate = tx.recurringEndDate ? DateUtils.timestampToLocalDate(tx.recurringEndDate) : undefined;
-          const nextDue = RecurringPaymentService.calculateNextDueDate(startDate, tx.recurringFrequency!, endDate);
-          if (RecurringPaymentService.shouldNotify(nextDue, 3)) {
-            const days = RecurringPaymentService.getDaysUntilDue(nextDue);
-            computed.push({
-              id: `notif_${tx.id}_${nextDue.getTime()}`,
-              transactionId: tx.id,
-              description: tx.description || 'Transação recorrente',
-              amount: tx.amount || 0,
-              category: tx.category || 'Outros',
-              dueDate: nextDue,
-              frequency: tx.recurringFrequency,
-              daysUntilDue: days,
-              recurringId: tx.recurringId || null,
-            });
-          }
-        } catch (e) {
-          console.error('Erro ao processar tx para notificação', tx?.id, e);
+        if (
+          !tx ||
+          !tx.recurring ||
+          !tx.recurringFrequency ||
+          tx.isActive === false
+        )
+          continue;
+        const startDate = tx.date
+          ? DateUtils.timestampToLocalDate(tx.date)
+          : new Date();
+        const endDate = tx.recurringEndDate
+          ? DateUtils.timestampToLocalDate(tx.recurringEndDate)
+          : undefined;
+        const nextDue = RecurringPaymentService.calculateNextDueDate(
+          startDate,
+          tx.recurringFrequency!,
+          endDate,
+        );
+
+        if (RecurringPaymentService.shouldNotify(nextDue, 3)) {
+          const days = RecurringPaymentService.getDaysUntilDue(nextDue);
+          computed.push({
+            id: `notif_${tx.id}_${nextDue.getTime()}`,
+            transactionId: tx.id,
+            description: tx.description || "Transação recorrente",
+            amount: tx.amount || 0,
+            category: tx.category || "Outros",
+            dueDate: nextDue,
+            frequency: tx.recurringFrequency,
+            daysUntilDue: days,
+          });
         }
       }
-
-      // ordena por tempo restante
       computed.sort((a, b) => a.daysUntilDue - b.daysUntilDue);
 
-      // compara com localStorage para descobrir o que é novo
-      const stored = JSON.parse(localStorage.getItem('recurringNotifications') || '[]');
-      const newOnes = computed.filter(n => !stored.some((s: any) => s.id === n.id));
+      const stored = JSON.parse(
+        localStorage.getItem("recurringNotifications") || "[]",
+      );
+      const newOnes = computed.filter(
+        (n) => !stored.some((s: any) => s.id === n.id),
+      );
 
       if (newOnes.length > 0) {
-        // salva concatenado (novos no topo)
         const merged = [...newOnes, ...stored];
-        localStorage.setItem('recurringNotifications', JSON.stringify(merged));
+        localStorage.setItem("recurringNotifications", JSON.stringify(merged));
       }
 
-      const finalStored = JSON.parse(localStorage.getItem('recurringNotifications') || '[]');
+      const finalStored = JSON.parse(
+        localStorage.getItem("recurringNotifications") || "[]",
+      );
       setNotifications(finalStored);
       setUnreadCount(finalStored.length);
     } catch (error) {
-      console.error('Erro ao buscar transações:', error);
+      console.error("Erro ao buscar transações:", error);
     }
   }, []);
 
-  // auth listener
+  // Escutar mudanças no perfil do usuário
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (currentUser) => {
+    const handleProfileUpdate = () => {
+      if (user?.uid) {
+        console.log("Perfil atualizado, buscando novos dados...");
+        fetchUserData(user.uid);
+      }
+    };
+
+    window.addEventListener("userProfileUpdated", handleProfileUpdate);
+
+    return () => {
+      window.removeEventListener("userProfileUpdated", handleProfileUpdate);
+    };
+  }, [user, fetchUserData]);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (currentUser) => {
+      console.log("Auth state changed:", currentUser?.uid);
       setUser(currentUser);
       if (currentUser?.uid) {
-        fetchAndComputeNotifications(currentUser.uid);
+        await fetchUserData(currentUser.uid);
+        await fetchAndComputeNotifications(currentUser.uid);
       } else {
-        setNotifications([]);
-        setUnreadCount(0);
-        localStorage.removeItem('recurringNotifications');
+        setUserData(null);
+        setUserPhotoUrl(null);
       }
     });
     return () => unsub();
-  }, [fetchAndComputeNotifications]);
+  }, [fetchUserData, fetchAndComputeNotifications]);
 
-  // refresh periódico (a cada 60 minutos)
-  useEffect(() => {
-    let interval: any;
-    if (user?.uid) {
-      interval = setInterval(() => fetchAndComputeNotifications(user.uid), 60 * 60 * 1000);
-    }
-    return () => clearInterval(interval);
-  }, [user, fetchAndComputeNotifications]);
-
-  // UI actions
   const markAsRead = (id: string) => {
-    const stored = JSON.parse(localStorage.getItem('recurringNotifications') || '[]');
+    const stored = JSON.parse(
+      localStorage.getItem("recurringNotifications") || "[]",
+    );
     const updated = stored.filter((n: any) => n.id !== id);
-    localStorage.setItem('recurringNotifications', JSON.stringify(updated));
+    localStorage.setItem("recurringNotifications", JSON.stringify(updated));
     setNotifications(updated);
     setUnreadCount(updated.length);
   };
 
   const markAllAsRead = () => {
-    localStorage.setItem('recurringNotifications', JSON.stringify([]));
+    localStorage.setItem("recurringNotifications", JSON.stringify([]));
     setNotifications([]);
     setUnreadCount(0);
   };
 
-  // theme
+  // Theme e click outside
   useEffect(() => {
-    const saved = (localStorage.getItem('theme') as 'light' | 'dark') || 'light';
+    const saved =
+      (localStorage.getItem("theme") as "light" | "dark") || "light";
     setTheme(saved);
     document.documentElement.dataset.theme = saved;
   }, []);
 
-  const toggleTheme = () => {
-    const next = theme === 'dark' ? 'light' : 'dark';
-    setTheme(next);
-    document.documentElement.dataset.theme = next;
-    localStorage.setItem('theme', next);
-  };
-
-  // close on outside click
   useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        notificationsRef.current &&
+        !notificationsRef.current.contains(e.target as Node)
+      ) {
+        setNotificationsOpen(false);
       }
     };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  return (
-    <header className={styles.header}>
-      <div className={styles.left}>
-        <button
-          className={styles.mobileBtn}
-          onClick={() => {
-            setMobileOpen(prev => !prev);
-            const event = new CustomEvent('toggle-sidebar', { detail: { from: 'header' } });
-            window.dispatchEvent(event);
-          }}
-          aria-label={mobileOpen ? 'Fechar menu' : 'Abrir menu'}
-        >
-          {mobileOpen ? <X /> : <Menu />}
-        </button>
+  const getUserDisplayName = () => {
+    return user?.displayName || userData?.displayName || "Usuário";
+  };
 
-        <Link href="/" className={styles.brand}>Orion</Link>
-      </div>
-
-      <div className={styles.center}>
-        <div className={styles.search}>
-          <Search className={styles.searchIcon} size={20} />
-          <input
-            className={styles.searchInput}
-            placeholder="Buscar transações, relatórios..."
-            aria-label="Buscar transações e relatórios"
-          />
-        </div>
-      </div>
-
-      <div className={styles.right}>
-        {/* Theme toggle */}
-        <button className={styles.iconBtn} onClick={toggleTheme} aria-label="Alternar tema">
-          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-        </button>
-
-        {/* Notification bell + panel */}
-        <div className={styles.notificationWrapper} ref={panelRef}>
-          <button
-            className={`${styles.bellBtn} ${unreadCount > 0 ? styles.hasUnread : ''}`}
-            onClick={() => setMenuOpen(prev => !prev)}
-            aria-haspopup="true"
-            aria-expanded={menuOpen}
-            title="Notificações de pagamentos recorrentes"
-          >
-            <Bell size={18} />
-            {unreadCount > 0 && <span className={styles.notificationCount}>{unreadCount > 99 ? '99+' : unreadCount}</span>}
-          </button>
-
-          <AnimatePresence>
-            {menuOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: -6, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -6, scale: 0.98 }}
-                className={styles.notificationsPanel}
-                role="dialog"
-                aria-label="Painel de notificações"
-              >
-                <div className={styles.notificationsHeader}>
-                  <div>
-                    <h4>Pagamentos Recorrentes</h4>
-                    <span className={styles.notificationsSubtitle}>
-                      {notifications.length} notificação{notifications.length !== 1 ? 'es' : ''}
-                    </span>
-                  </div>
-                  <div className={styles.notificationsActions}>
-                    <button className={styles.clearBtn} onClick={markAllAsRead} disabled={notifications.length === 0}>
-                      Limpar todas
-                    </button>
-                  </div>
-                </div>
-
-                <div className={styles.notificationsList}>
-                  {notifications.length === 0 ? (
-                    <div className={styles.empty}>
-                      <div className={styles.emptyIcon}>🎉</div>
-                      <div className={styles.emptyText}>Nenhuma notificação no momento</div>
-                      <div className={styles.emptySubtitle}>Você será notificado sobre pagamentos futuros</div>
-                    </div>
-                  ) : (
-                    notifications.map((n: any) => (
-                      <div key={n.id} className={styles.notificationItem}>
-                        <div className={styles.notificationLeft}>
-                          <div className={styles.notificationIcon}>
-                            <Repeat size={16} />
-                          </div>
-                        </div>
-
-                        <div className={styles.notificationBody}>
-                          <div className={styles.notificationTitle}>
-                            {n.description}
-                          </div>
-                          <div className={styles.notificationMeta}>
-                            <span className={styles.notificationCategory}>{n.category}</span>
-                            <span className={styles.notificationAmount}>
-                              {(n.amount || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className={styles.notificationRight}>
-                          <div className={styles.dueBadge}>
-                            <Clock size={12} />
-                            <span>{RecurringPaymentService.formatDueLabel(new Date(n.dueDate))}</span>
-                          </div>
-
-                          <button
-                            className={styles.markReadBtn}
-                            title="Marcar como lida"
-                            onClick={() => markAsRead(n.id)}
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                <div className={styles.notificationsFooter}>
-                  <small>Notificações geradas automaticamente para pagamentos recorrentes.</small>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* User area */}
-        <div className={styles.userArea}>
-          {user ? (
-            <UserMenu user={user} />
-          ) : (
-            <button className={styles.loginButton} onClick={() => loginWithGoogle()}>
-              <User size={16} /> Login
-            </button>
-          )}
-        </div>
-      </div>
-    </header>
-  );
-}
-
-// componente pequeno para menu do usuário (mantive local para arquivo único)
-function UserMenu({ user }: { user: any }) {
-  const [open, setOpen] = useState(false);
-  const getInitials = (displayName: string | null = '') => {
-    if (!displayName) return 'U';
-    const parts = displayName.trim().split(' ').filter(Boolean);
-    if (parts.length === 0) return 'U';
-    if (parts.length === 1) return parts[0][0].toUpperCase();
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  const getUserInitial = () => {
+    const name = getUserDisplayName();
+    return name.charAt(0).toUpperCase();
   };
 
   return (
-    <div className={styles.userMenuWrapper}>
-      <button className={styles.userBtn} onClick={() => setOpen(prev => !prev)} aria-expanded={open}>
-        {user.photoURL ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={user.photoURL} alt={user.displayName || 'Avatar'} className={styles.avatar} />
-        ) : (
-          <div className={styles.avatarFallback}>{getInitials(user.displayName)}</div>
-        )}
-        <span className={styles.userName}>{user.displayName || 'Usuário'}</span>
-        <ChevronDown size={14} className={`${styles.chevron} ${open ? styles.chevronOpen : ''}`} />
-      </button>
+    <div className={styles.headerWrapper}>
+      <header className={styles.header}>
+        {/* ESQUERDA: Logo + Botão Mobile */}
+        <div className={styles.left}>
+          <button
+            className={styles.mobileBtn}
+            onClick={() => {
+              setMobileOpen((prev) => !prev);
+              window.dispatchEvent(new CustomEvent("toggle-sidebar"));
+            }}
+          >
+            {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
 
-      <AnimatePresence>
-        {open && (
-          <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} className={styles.dropdown}>
-            <div className={styles.dropdownHeader}>
-              <p>Logado como <strong>{user.displayName || 'Usuário'}</strong></p>
-            </div>
-            <Link href="/profile" className={styles.dropdownItem}><UserCircle size={16} /> Perfil</Link>
-            <Link href="/settings" className={styles.dropdownItem}><Settings size={16} /> Configurações</Link>
-            <div className={styles.dropdownDivider} />
-            <button className={styles.dropdownItem} onClick={() => { if (confirm('Deseja realmente sair?')) logout(); }}><LogOut size={16} /> Sair</button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          <div className={styles.brandContainer}>
+            <Image
+              src="/icon0.png"
+              alt="Orion Logo"
+              width={32}
+              height={32}
+              priority
+            />
+            <span className={styles.brandName}>
+              <span style={{ color: "#4f46e5" }}>Orion</span>.App
+            </span>
+          </div>
+        </div>
+
+        {/* CENTRO: Vazio ou apenas espaçamento flex */}
+        <div className={styles.center}></div>
+
+        {/* DIREITA: Ações */}
+        <div className={styles.right}>
+          {/* Botão de Busca (Circular) */}
+          <button className={styles.iconBtn} aria-label="Buscar">
+            <Search size={20} />
+          </button>
+
+          {/* Notificações (Circular com Badge) */}
+          <div className={styles.notificationWrapper} ref={notificationsRef}>
+            <button
+              className={`${styles.iconBtn} ${
+                unreadCount > 0 ? styles.hasUnread : ""
+              }`}
+              onClick={() => setNotificationsOpen(!notificationsOpen)}
+            >
+              <Bell size={20} />
+              {unreadCount > 0 && (
+                <span className={styles.badge}>
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </button>
+
+            <AnimatePresence>
+              {notificationsOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  className={styles.notificationsPanel}
+                >
+                  <div className={styles.notificationsHeader}>
+                    <h4>Notificações</h4>
+                    <button
+                      onClick={markAllAsRead}
+                      disabled={!notifications.length}
+                    >
+                      Limpar
+                    </button>
+                  </div>
+                  <div className={styles.notificationsList}>
+                    {notifications.length === 0 ? (
+                      <div className={styles.emptyState}>
+                        Sem novas notificações
+                      </div>
+                    ) : (
+                      notifications.map((n) => (
+                        <div key={n.id} className={styles.notificationItem}>
+                          <div className={styles.notifIcon}>
+                            <Clock size={14} />
+                          </div>
+                          <div className={styles.notifContent}>
+                            <p>{n.description}</p>
+                            <span>
+                              {RecurringPaymentService.formatDueLabel(
+                                new Date(n.dueDate),
+                              )}
+                            </span>
+                          </div>
+                          <button onClick={() => markAsRead(n.id)}>
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Botão Carteira (Pílula) */}
+          <Link href="/wallet" className={styles.walletBtn}>
+            <Wallet size={18} />
+            <span>Wallet</span>
+          </Link>
+
+          {/* Avatar do Usuário */}
+          <div className={styles.userArea}>
+            {user ? (
+              <Link href="/profile" className={styles.avatarBtn}>
+                {userPhotoUrl ? (
+                  <div className={styles.avatarImage}>
+                    <img
+                      src={userPhotoUrl}
+                      alt="User Avatar"
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        borderRadius: "50%",
+                        objectFit: "cover",
+                        display: "block",
+                      }}
+                      onError={(e) => {
+                        // Fallback se a imagem não carregar
+                        console.error("Erro ao carregar imagem:", userPhotoUrl);
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = "none";
+                        const parent = target.parentElement;
+                        if (parent) {
+                          const fallback = document.createElement("div");
+                          fallback.className = styles.avatarFallback;
+                          fallback.textContent = getUserInitial();
+                          parent.appendChild(fallback);
+                        }
+                      }}
+                      onLoad={() => {
+                        console.log("Imagem carregada com sucesso");
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className={styles.avatarFallback}>
+                    {getUserInitial()}
+                  </div>
+                )}
+              </Link>
+            ) : (
+              <button
+                className={styles.loginBtn}
+                onClick={() => loginWithGoogle()}
+              >
+                Entrar
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
     </div>
   );
 }

@@ -1,0 +1,46 @@
+/* app/goals/page.module.scss */
+
+.tabsContainer {
+ display: flex;
+ gap: 12px;
+ margin-bottom: 24px;
+ border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+ padding-bottom: 4px;
+}
+
+.tabButton {
+ display: flex;
+ align-items: center;
+ gap: 8px;
+ background: transparent;
+ border: none;
+ color: #a1a1aa;
+ padding: 12px 24px;
+ border-radius: 12px;
+ font-size: 1rem;
+ font-weight: 600;
+ cursor: pointer;
+ transition: all 0.2s;
+ position: relative;
+
+ &:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+ }
+
+ &.active {
+  color: #9488f0;
+  background: rgba(148, 136, 240, 0.1);
+
+  &::after {
+   content: '';
+   position: absolute;
+   bottom: -5px;
+   left: 0;
+   right: 0;
+   height: 2px;
+   background: #9488f0;
+   border-radius: 1px;
+  }
+ }
+}

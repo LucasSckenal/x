@@ -1,0 +1,346 @@
+.pageWrap {
+  display: flex;
+  background: #0d0e10;
+  min-height: 100vh;
+  color: #fff;
+}
+
+.mainContent {
+  flex: 1;
+}
+
+.container {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.dashboardGrid {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 24px;
+}
+
+.widgetCard {
+  background: #16181b;
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.sectionTitle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+/* --- Cartões --- */
+.cardsScroll {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.creditCard {
+  width: 280px;
+  height: 160px;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+
+  &.purpleCard {
+    background: #9488f0;
+  }
+
+  &.blueCard {
+    background: #8ba1f6;
+  }
+
+  .cardNumber {
+    font-size: 1.2rem;
+    letter-spacing: 2px;
+    font-weight: 500;
+  }
+}
+
+/* --- Invoices Lateral --- */
+.invoiceItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+}
+
+.invoiceInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.invoiceIcon {
+  width: 40px;
+  height: 40px;
+  background: #000;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.invoiceText {
+  display: flex;
+  flex-direction: column;
+
+  strong {
+    font-size: 14px;
+  }
+
+  span {
+    font-size: 12px;
+    color: #6c7278;
+  }
+}
+
+.addCardBtn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.miniSelect {
+  background: transparent;
+  color: #fff;
+  border: none;
+  font-size: 14px;
+  outline: none;
+}
+
+/* Estrutura de Rolagem dos Cartões */
+.cardsScroll {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 15px;
+  scrollbar-width: none;
+
+  /* Firefox */
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Chrome/Safari */
+}
+
+/* Base do Cartão (Estilo Wealth Wave) */
+.creditCard {
+  min-width: 300px;
+  height: 170px;
+  border-radius: 20px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform 0.3s ease;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+
+  &:hover {
+    transform: translateY(-5px);
+  }
+}
+
+.cardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.bankInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  span {
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.5px;
+  }
+}
+
+.cardNumber {
+  font-size: 1.4rem;
+  letter-spacing: 3px;
+  font-weight: 500;
+  margin: 15px 0;
+}
+
+.cardFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+/* Cores dos Bancos */
+.bank_nubank {
+  background: linear-gradient(135deg, #820ad1, #5f0896);
+}
+
+.bank_xp {
+  background: linear-gradient(135deg, #000000, #2c2c2c);
+}
+
+.bank_banrisul {
+  background: linear-gradient(135deg, #005bac, #004481);
+}
+
+.bank_picpay {
+  background: linear-gradient(135deg, #21c25e, #1a9649);
+}
+
+.bank_c6 {
+  background: linear-gradient(135deg, #2d2d2d, #141414);
+}
+
+.bank_sicredi {
+  background: linear-gradient(135deg, #31ad45, #248a35);
+}
+
+.bank_default {
+  background: linear-gradient(135deg, #4b4e52, #2d2f31);
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modalContent {
+  background: #16181b;
+  width: 100%;
+  max-width: 450px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 24px;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+
+  h3 {
+    margin: 0;
+    font-size: 20px;
+  }
+}
+
+.previewZone {
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: center;
+  /* Reduz o tamanho do card no preview */
+  transform: scale(0.9);
+}
+
+.formGroup {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  label {
+    font-size: 13px;
+    color: #6c7278;
+  }
+
+  input,
+  select {
+    background: #0d0e10;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 12px;
+    border-radius: 10px;
+    color: white;
+    outline: none;
+
+    &:focus {
+      border-color: #9488f0;
+    }
+  }
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.saveBtn {
+  width: 100%;
+  padding: 14px;
+  background: #9488f0;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: opacity 0.2s;
+
+  &:hover {
+    opacity: 0.9;
+  }
+}
+
+/* Adicione dentro da classe .creditCard no seu arquivo SCSS */
+
+.creditCard {
+  /* ... estilos anteriores ... */
+  position: relative;
+  /* Necessário para posicionar o botão de deletar */
+
+  .deleteCardBtn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: rgba(0, 0, 0, 0.3);
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    /* Invisível por padrão */
+    transition: all 0.2s ease;
+    z-index: 10;
+
+    &:hover {
+      background: rgba(255, 68, 68, 0.8);
+      transform: scale(1.1);
+    }
+  }
+
+  /* Mostra o botão quando passa o mouse no cartão */
+  &:hover .deleteCardBtn {
+    opacity: 1;
+  }
+}

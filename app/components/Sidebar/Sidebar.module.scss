@@ -1,209 +1,113 @@
 /* components/Sidebar/Sidebar.module.scss */
 
-$bg-sidebar: #09090A;
-$text-primary: #E1E1E6;
-$text-secondary: #7C7C8A;
-$text-muted: #505059;
-$accent: #8257e5;
-/* Roxo principal */
-$border: #202024;
-$hover-bg: rgba(255, 255, 255, 0.05);
-$danger: #F75A68;
+$bg-sidebar: #18181b;
+/* Um cinza bem escuro, levemente mais claro que preto puro */
+$text-secondary: #71717a;
+$accent: #fff;
+/* Ícone ativo fica branco */
+$border: #27272a;
+$hover-bg: #27272a;
 
 .sidebarContainer {
  position: fixed;
- top: 0;
- left: 0;
- bottom: 0;
- width: 260px;
- padding: 2rem 0;
- /* Removi o padding lateral do container para o risco encostar na borda */
+ top: 6rem;
+ /* Espaçamento do topo */
+ left: 1.5rem;
+ /* Espaçamento da esquerda (efeito flutuante) */
+ bottom: 1rem;
+ /* Espaçamento de baixo */
+
+ width: 72px;
+ /* Largura fixa estreita */
+
  display: flex;
  flex-direction: column;
+ align-items: center;
+ /* Centraliza tudo horizontalmente */
+ padding: 1rem 0.5rem;
+
  z-index: 50;
  background-color: $bg-sidebar;
- border-right: 1px solid $border;
+ border: 1px solid $border;
+ border-radius: 16px;
+ /* Borda bem arredondada (Pill shape) */
+ box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
-.logo {
- font-size: 1.4rem;
- font-weight: 700;
- color: #fff;
- margin-bottom: 2rem;
- padding: 0 1.5rem;
- /* Padding devolvido aqui para alinhar */
- display: flex;
- align-items: center;
- gap: 0.8rem;
-}
-
-.logoIcon {
- width: 32px;
- height: 32px;
- background: $accent;
- color: #fff;
- border-radius: 8px;
- display: flex;
- align-items: center;
- justify-content: center;
- font-weight: 800;
- font-size: 1.2rem;
-}
-
+/* --- NAVEGAÇÃO --- */
 .nav {
  display: flex;
  flex-direction: column;
- gap: 0.5rem;
+ align-items: center;
+ gap: 1.5rem;
+ /* Espaço entre os ícones */
  flex: 1;
+ width: 100%;
  overflow-y: auto;
 
+ /* Esconde barra de rolagem */
  &::-webkit-scrollbar {
   width: 0px;
  }
-}
-
-.navGroup {
- display: flex;
- flex-direction: column;
- gap: 0.2rem;
-}
-
-.groupLabel {
- font-size: 0.7rem;
- text-transform: uppercase;
- color: $text-muted;
- font-weight: 700;
- letter-spacing: 0.8px;
- margin-top: 1rem;
- margin-bottom: 0.4rem;
- padding-left: 1.5rem;
-}
-
-.separator {
- height: 1px;
- background-color: $border;
- margin: 0.5rem 1.5rem;
- opacity: 0.5;
 }
 
 /* --- ITEM DE NAVEGAÇÃO --- */
 .navItem {
  display: flex;
  align-items: center;
- gap: 1rem;
- padding: 0.8rem 1.5rem;
- /* Padding interno para afastar texto da borda */
+ justify-content: center;
+
+ width: 44px;
+ height: 44px;
+ border-radius: 14px;
+ /* Squircle (quadrado arredondado) */
 
  color: $text-secondary;
- text-decoration: none;
- font-size: 0.9rem;
- font-weight: 500;
  transition: all 0.2s ease-in-out;
-
- /* O RISCO INVISÍVEL (Reserva espaço para não pular) */
- border-left: 4px solid transparent;
+ position: relative;
 
  &:hover {
-  color: $text-primary;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0%, transparent 100%);
+  color: #e4e4e7;
+  background-color: rgba(255, 255, 255, 0.05);
  }
 
- /* --- ESTILO SELECIONADO (RISCO + FADE) --- */
+ /* --- ESTILO SELECIONADO --- */
  &.active {
-  /* 1. O RISCO (Borda esquerda sólida) */
-  border-left-color: $accent;
+  color: $bg-sidebar;
+  /* Ícone fica escuro */
+  background-color: var(--accent);
+  /* Fundo fica branco (inverso) */
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
 
-  /* 2. O FADE (Gradiente que começa roxo e fica transparente) */
-  background: linear-gradient(90deg, rgba($accent, 0.15) 0%, rgba($accent, 0) 100%);
-
-  color: #fff;
-  /* Texto branco */
-  font-weight: 600;
-
-  .navIcon {
-   color: $accent;
-   /* Ícone roxo */
-   filter: drop-shadow(0 0 8px rgba($accent, 0.4));
-   /* Brilho no ícone */
-  }
+  /* Se preferir o estilo da imagem (apenas ícone branco sem fundo branco):
+       Use este bloco abaixo e comente o de cima:
+    
+       color: #fff;
+       background-color: transparent;
+       &::after {
+         content: '';
+         position: absolute;
+         left: -12px;
+         width: 4px;
+         height: 20px;
+         background: #fff;
+         border-radius: 0 4px 4px 0;
+       }
+    */
  }
 }
 
 .navIcon {
- width: 20px;
- height: 20px;
- transition: color 0.2s;
+ width: 22px;
+ height: 22px;
 }
 
 /* --- RODAPÉ --- */
 .footer {
  margin-top: auto;
- padding: 1.5rem;
- border-top: 1px solid $border;
-}
-
-/* CARTÃO DO USUÁRIO */
-.userProfile {
  display: flex;
- align-items: center;
- gap: 1rem;
- background: #121214;
- border: 1px solid $border;
- padding: 0.8rem;
- border-radius: 12px;
- cursor: pointer;
- transition: all 0.2s;
-
- &:hover {
-  border-color: rgba($accent, 0.5);
-  background: #161619;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
- }
-
- img {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #202024;
- }
-}
-
-.avatarFallback {
- width: 38px;
- height: 38px;
- border-radius: 50%;
- background: #202024;
- border: 1px solid $border;
- display: flex;
- align-items: center;
  justify-content: center;
- font-weight: 700;
- color: $text-primary;
-}
-
-.userInfo {
- display: flex;
- flex-direction: column;
- flex: 1;
- min-width: 0;
-
- strong {
-  font-size: 0.85rem;
-  color: #fff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
- }
-
- span {
-  font-size: 0.7rem;
-  color: $text-secondary;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
- }
+ width: 100%;
 }
 
 .logoutBtn {
@@ -211,42 +115,27 @@ $danger: #F75A68;
  border: none;
  color: $text-secondary;
  cursor: pointer;
- padding: 8px;
- border-radius: 8px;
+
+ width: 44px;
+ height: 44px;
+ border-radius: 12px;
+
  display: flex;
  align-items: center;
  justify-content: center;
  transition: all 0.2s;
 
  &:hover {
-  background: rgba($danger, 0.1);
-  color: $danger;
+  color: #ef4444;
+  /* Vermelho ao passar o mouse */
+  background: rgba(239, 68, 68, 0.1);
  }
 }
 
-.loadingUser {
- display: flex;
- align-items: center;
- gap: 1rem;
- opacity: 0.5;
-
- .skeletonAvatar {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: #202024;
- }
-
- .skeletonText {
-  height: 12px;
-  flex: 1;
-  background: #202024;
-  border-radius: 4px;
- }
-}
-
-@media (max-width: 1024px) {
+/* Responsividade: em mobile esconde ou transforma em menu inferior */
+@media (max-width: 768px) {
  .sidebarContainer {
   display: none;
+  /* Ou altere para position: fixed; bottom: 0; width: 100%; height: 60px; etc... */
  }
 }

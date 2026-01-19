@@ -7,13 +7,14 @@ import {
   Edit,
   Trash2,
   Calendar,
+  ChevronLeft,
+  ChevronRight,
   AlertCircle,
 } from "lucide-react";
 import Modal from "../Modal/Modal";
 import CustomSelect from "../CustomSelect/CustomSelect";
 import styles from "./TransactionsTable.module.scss";
 
-// --- Interfaces ---
 export interface Transaction {
   id: string;
   description: string;
@@ -29,17 +30,19 @@ export interface Transaction {
   isProjection?: boolean;
 }
 
+// --- ATUALIZADO COM "CARTÃO DE CRÉDITO" ---
 export const transactionCategories = [
   { value: "Alimentação", label: "Alimentação", icon: "🍕" },
   { value: "Transporte", label: "Transporte", icon: "🚗" },
   { value: "Compras", label: "Compras", icon: "🛍️" },
+  { value: "Cartão de Crédito", label: "Cartão de Crédito", icon: "💳" }, // <--- NOVO
   { value: "Entretenimento", label: "Entretenimento", icon: "🎬" },
   { value: "Saúde", label: "Saúde", icon: "🏥" },
   { value: "Educação", label: "Educação", icon: "📚" },
   { value: "Salário", label: "Salário", icon: "💰" },
   { value: "Investimentos", label: "Investimentos", icon: "📈" },
-  { value: "Outros", label: "Outros", icon: "📦" },
   { value: "Moradia", label: "Moradia", icon: "🏠" },
+  { value: "Outros", label: "Outros", icon: "📦" },
 ];
 
 const frequencyOptions = [
@@ -48,10 +51,8 @@ const frequencyOptions = [
   { value: "yearly", label: "Anual", icon: "🎉" },
 ];
 
-// --- Funções Auxiliares de Data ---
 const parseSafeDate = (dateStr: string) => {
   if (!dateStr) return new Date(NaN);
-  // Adiciona T00:00:00 para evitar problemas de fuso horário
   const d = new Date(dateStr.includes("T") ? dateStr : `${dateStr}T00:00:00`);
   return d;
 };
@@ -67,11 +68,14 @@ export default function TransactionsTable({
   onEditTransaction,
   onDeleteTransaction,
 }: any) {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [isDateModalOpen, setIsDateModalOpen] = useState(false);
+  const [pickerYear, setPickerYear] = useState(new Date().getFullYear());
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filter, setFilter] = useState("all");
-  const [monthFilter, setMonthFilter] = useState("all");
   const [selectedTransaction, setSelectedTransaction] =
     useState<Transaction | null>(null);
   const [editScope, setEditScope] = useState<"single" | "series">("single");
@@ -81,17 +85,34 @@ export default function TransactionsTable({
     amount: "",
     type: "expense" as "income" | "expense",
     category: "Outros",
-    categoryIcon: "💰",
+    categoryIcon: "📦",
     date: formatToISO(new Date()),
     recurring: false,
     frequency: "monthly" as any,
     endDate: "",
   });
 
-  // --- Lógica de Projeção Blindada ---
+  const openDatePicker = () => {
+    setPickerYear(currentDate.getFullYear());
+    setIsDateModalOpen(true);
+  };
+
+  const handleMonthSelect = (monthIndex: number) => {
+    const newDate = new Date(currentDate);
+    newDate.setFullYear(pickerYear);
+    newDate.setMonth(monthIndex);
+    setCurrentDate(newDate);
+    setIsDateModalOpen(false);
+  };
+
+  const formatMonthDisplay = (date: Date) => {
+    return date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  };
+
   const filteredAndSortedTransactions = useMemo(() => {
     const expanded: Transaction[] = [];
-    const endOfYear = new Date(new Date().getFullYear(), 11, 31);
+    const viewYear = currentDate.getFullYear();
+    const endOfYear = new Date(viewYear, 11, 31);
 
     transactions.forEach((t: Transaction) => {
       expanded.push(t);
@@ -105,13 +126,11 @@ export default function TransactionsTable({
           ? parseSafeDate(limitDateStr)
           : endOfYear;
         const finalLimit =
-          isNaN(limitDate.getTime()) || limitDate > endOfYear
-            ? endOfYear
-            : limitDate;
+          !limitDateStr || limitDate > endOfYear ? endOfYear : limitDate;
 
         let safetyCounter = 0;
-        while (safetyCounter < 50) {
-          // Proteção contra loop infinito
+
+        while (safetyCounter < 60) {
           safetyCounter++;
 
           if (t.recurringFrequency === "weekly")
@@ -139,35 +158,21 @@ export default function TransactionsTable({
           .toLowerCase()
           .includes(searchTerm.toLowerCase());
         const matchesType = filter === "all" || t.type === filter;
+
         const tDate = parseSafeDate(t.date);
         const matchesMonth =
-          monthFilter === "all" ||
-          (!isNaN(tDate.getTime()) &&
-            tDate.getMonth().toString() === monthFilter);
+          !isNaN(tDate.getTime()) &&
+          tDate.getMonth() === currentDate.getMonth() &&
+          tDate.getFullYear() === currentDate.getFullYear();
+
         return matchesSearch && matchesType && matchesMonth;
       })
       .sort(
         (a, b) =>
           parseSafeDate(b.date).getTime() - parseSafeDate(a.date).getTime()
       );
-  }, [transactions, searchTerm, filter, monthFilter]);
+  }, [transactions, searchTerm, filter, currentDate]);
 
-  const transactionsByMonth = useMemo(() => {
-    const groups: Record<string, Transaction[]> = {};
-    filteredAndSortedTransactions.forEach((t) => {
-      const date = parseSafeDate(t.date);
-      if (isNaN(date.getTime())) return;
-      const monthYear = date.toLocaleDateString("pt-BR", {
-        year: "numeric",
-        month: "long",
-      });
-      if (!groups[monthYear]) groups[monthYear] = [];
-      groups[monthYear].push(t);
-    });
-    return groups;
-  }, [filteredAndSortedTransactions]);
-
-  // --- Handlers ---
   const handleEditClick = (t: Transaction) => {
     setSelectedTransaction(t);
     setEditScope("single");
@@ -189,17 +194,17 @@ export default function TransactionsTable({
     const data = {
       ...formData,
       amount: parseFloat(formData.amount) || 0,
-      scope: editScope,
       recurringFrequency: formData.frequency,
       recurringEndDate: formData.endDate || null,
     };
 
     if (selectedTransaction?.isProjection) {
-      onAddTransaction({ ...data, isProjection: false });
+      // Proteção caso onAddTransaction não seja passado (embora agora deva ser)
+      if (onAddTransaction) onAddTransaction({ ...data, isProjection: false });
     } else if (selectedTransaction) {
-      onEditTransaction(selectedTransaction.id, data);
+      if (onEditTransaction) onEditTransaction(selectedTransaction.id, data);
     } else {
-      onAddTransaction(data);
+      if (onAddTransaction) onAddTransaction(data);
     }
     setIsModalOpen(false);
   };
@@ -208,6 +213,12 @@ export default function TransactionsTable({
     <div className={styles.container}>
       <div className={styles.header}>
         <h3>Transações</h3>
+
+        <button className={styles.dateTriggerBtn} onClick={openDatePicker}>
+          <Calendar size={18} />
+          <span>{formatMonthDisplay(currentDate)}</span>
+        </button>
+
         <div className={styles.controls}>
           <div className={styles.searchBox}>
             <Search size={18} />
@@ -221,6 +232,12 @@ export default function TransactionsTable({
             className={styles.addButton}
             onClick={() => {
               setSelectedTransaction(null);
+              setFormData({
+                ...formData,
+                description: "",
+                amount: "",
+                date: formatToISO(new Date()),
+              });
               setIsModalOpen(true);
             }}
           >
@@ -238,78 +255,132 @@ export default function TransactionsTable({
           <div>Ações</div>
         </div>
 
-        {Object.entries(transactionsByMonth).map(([month, items]) => (
-          <div key={month}>
-            <div className={styles.monthHeader}>{month}</div>
-            {items.map((t) => (
-              <div
-                key={t.id}
-                className={`${styles.tableRow} ${
-                  t.isProjection ? styles.projectionRow : ""
-                }`}
-              >
-                <div className={styles.cell}>
-                  <div className={styles.cellDescription}>
-                    <span className={styles.categoryIcon}>
-                      {t.categoryIcon}
-                    </span>
-                    <div>
-                      <div>
-                        {t.description}{" "}
-                        {t.isProjection && (
-                          <small style={{ opacity: 0.6 }}>(Previsto)</small>
-                        )}
-                      </div>
-                      {t.recurring && (
-                        <div className={styles.recurringBadge}>
-                          <Calendar size={12} /> Recorrente
-                        </div>
+        {filteredAndSortedTransactions.length > 0 ? (
+          filteredAndSortedTransactions.map((t) => (
+            <div
+              key={t.id}
+              className={`${styles.tableRow} ${
+                t.isProjection ? styles.projectionRow : ""
+              }`}
+            >
+              <div className={styles.cell}>
+                <div className={styles.cellDescription}>
+                  <span className={styles.categoryIcon}>{t.categoryIcon}</span>
+                  <div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                      }}
+                    >
+                      {t.description}
+                      {t.isProjection && (
+                        <span className={styles.tagProj}>Previsto</span>
                       )}
                     </div>
-                  </div>
-                </div>
-                <div className={styles.cell}>{t.category}</div>
-                <div className={styles.cell}>
-                  {parseSafeDate(t.date).toLocaleDateString("pt-BR")}
-                </div>
-                <div className={`${styles.cell} ${styles.cellAmount}`}>
-                  <span
-                    className={
-                      t.type === "income" ? styles.income : styles.expense
-                    }
-                  >
-                    {t.type === "income" ? "+" : "-"} R${" "}
-                    {Math.abs(t.amount).toFixed(2)}
-                  </span>
-                </div>
-                <div className={styles.cellActions}>
-                  <div className={styles.actionButtons}>
-                    <button onClick={() => handleEditClick(t)}>
-                      <Edit size={16} />
-                    </button>
-                    {!t.isProjection && (
-                      <button
-                        onClick={() => {
-                          setSelectedTransaction(t);
-                          setIsDeleteModalOpen(true);
-                        }}
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                    {t.recurring && !t.isProjection && (
+                      <div className={styles.recurringBadge}>
+                        <Calendar size={12} /> Recorrente
+                      </div>
                     )}
                   </div>
                 </div>
               </div>
-            ))}
+              <div className={styles.cell}>{t.category}</div>
+              <div className={styles.cell}>
+                {parseSafeDate(t.date).toLocaleDateString("pt-BR", {
+                  day: "2-digit",
+                  month: "short",
+                })}
+              </div>
+              <div className={`${styles.cell} ${styles.cellAmount}`}>
+                <span
+                  className={
+                    t.type === "income" ? styles.income : styles.expense
+                  }
+                >
+                  {t.type === "income" ? "+" : "-"} R${" "}
+                  {Math.abs(t.amount).toFixed(2)}
+                </span>
+              </div>
+              <div className={styles.cellActions}>
+                <div className={styles.actionButtons}>
+                  <button
+                    onClick={() => handleEditClick(t)}
+                    title={t.isProjection ? "Confirmar Pagamento" : "Editar"}
+                  >
+                    <Edit size={16} />
+                  </button>
+                  {!t.isProjection && (
+                    <button
+                      onClick={() => {
+                        setSelectedTransaction(t);
+                        setIsDeleteModalOpen(true);
+                      }}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div style={{ padding: "40px", textAlign: "center", color: "#888" }}>
+            Nenhuma transação encontrada em{" "}
+            <strong>{formatMonthDisplay(currentDate)}</strong>.
           </div>
-        ))}
+        )}
       </div>
 
-      {/* Modal Principal */}
+      <Modal
+        isOpen={isDateModalOpen}
+        onClose={() => setIsDateModalOpen(false)}
+        title="Selecionar Período"
+      >
+        <div className={styles.datePickerContent}>
+          <div className={styles.yearSelector}>
+            <button onClick={() => setPickerYear((prev) => prev - 1)}>
+              <ChevronLeft size={24} />
+            </button>
+            <span>{pickerYear}</span>
+            <button onClick={() => setPickerYear((prev) => prev + 1)}>
+              <ChevronRight size={24} />
+            </button>
+          </div>
+
+          <div className={styles.monthsGrid}>
+            {Array.from({ length: 12 }).map((_, i) => (
+              <button
+                key={i}
+                className={`${styles.monthBtn} ${
+                  currentDate.getMonth() === i &&
+                  currentDate.getFullYear() === pickerYear
+                    ? styles.active
+                    : ""
+                }`}
+                onClick={() => handleMonthSelect(i)}
+              >
+                {new Date(0, i)
+                  .toLocaleDateString("pt-BR", { month: "short" })
+                  .replace(".", "")}
+              </button>
+            ))}
+          </div>
+        </div>
+      </Modal>
+
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={selectedTransaction ? "Editar" : "Novo"}
+        title={
+          selectedTransaction?.isProjection
+            ? "Confirmar Transação"
+            : selectedTransaction
+            ? "Editar"
+            : "Nova Transação"
+        }
       >
         <div className={styles.modalForm}>
           <div className={styles.formGroup}>
@@ -343,7 +414,6 @@ export default function TransactionsTable({
               />
             </div>
           </div>
-
           <div className={styles.formGroup}>
             <label>Categoria</label>
             <CustomSelect
@@ -386,7 +456,7 @@ export default function TransactionsTable({
                     />
                   </div>
                   <div className={styles.formGroup}>
-                    <label>Até quando?</label>
+                    <label>Data Final (Opcional)</label>
                     <input
                       type="date"
                       value={formData.endDate}
@@ -401,26 +471,11 @@ export default function TransactionsTable({
           </div>
 
           {(selectedTransaction?.recurring ||
-            selectedTransaction?.isProjection) && (
-            <div
-              style={{
-                background: "rgba(var(--accent-rgb), 0.05)",
-                padding: "15px",
-                borderRadius: "8px",
-                marginTop: "10px",
-              }}
-            >
-              <p
-                style={{
-                  fontSize: "12px",
-                  fontWeight: "bold",
-                  marginBottom: "8px",
-                }}
-              >
-                Aplicar em:
-              </p>
-              <div style={{ display: "flex", gap: "15px" }}>
-                <label style={{ fontSize: "13px" }}>
+            (selectedTransaction?.isProjection && formData.recurring)) && (
+            <div className={styles.scopeBox}>
+              <p>Aplicar alteração em:</p>
+              <div className={styles.radios}>
+                <label>
                   <input
                     type="radio"
                     checked={editScope === "single"}
@@ -428,7 +483,7 @@ export default function TransactionsTable({
                   />{" "}
                   Só esta
                 </label>
-                <label style={{ fontSize: "13px" }}>
+                <label>
                   <input
                     type="radio"
                     checked={editScope === "series"}
@@ -441,25 +496,13 @@ export default function TransactionsTable({
           )}
 
           <div className={styles.modalActions}>
-            <button
-              type="button"
-              className={styles.cancelButton}
-              onClick={() => setIsModalOpen(false)}
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              className={styles.saveButton}
-              onClick={handleSave}
-            >
+            <button className={styles.saveButton} onClick={handleSave}>
               Salvar
             </button>
           </div>
         </div>
       </Modal>
 
-      {/* Modal Deletar */}
       <Modal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
@@ -476,29 +519,27 @@ export default function TransactionsTable({
           </p>
           {selectedTransaction?.recurring && (
             <div
-              style={{
-                marginTop: "15px",
-                textAlign: "left",
-                background: "rgba(0,0,0,0.03)",
-                padding: "10px",
-              }}
+              className={styles.scopeBox}
+              style={{ marginTop: "15px", textAlign: "left" }}
             >
-              <label style={{ display: "block", marginBottom: "5px" }}>
-                <input
-                  type="radio"
-                  checked={editScope === "single"}
-                  onChange={() => setEditScope("single")}
-                />{" "}
-                Só esta
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  checked={editScope === "series"}
-                  onChange={() => setEditScope("series")}
-                />{" "}
-                Toda a série
-              </label>
+              <div className={styles.radios}>
+                <label>
+                  <input
+                    type="radio"
+                    checked={editScope === "single"}
+                    onChange={() => setEditScope("single")}
+                  />{" "}
+                  Só esta
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    checked={editScope === "series"}
+                    onChange={() => setEditScope("series")}
+                  />{" "}
+                  Toda a série
+                </label>
+              </div>
             </div>
           )}
           <div className={styles.modalActions} style={{ marginTop: "20px" }}>
@@ -510,9 +551,9 @@ export default function TransactionsTable({
             </button>
             <button
               className={styles.deleteConfirmButton}
-              style={{ background: "#ff4444", color: "white" }}
               onClick={() => {
-                onDeleteTransaction(selectedTransaction!.id, editScope);
+                if (onDeleteTransaction)
+                  onDeleteTransaction(selectedTransaction!.id, editScope);
                 setIsDeleteModalOpen(false);
               }}
             >

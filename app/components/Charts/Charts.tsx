@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useMemo } from 'react';
+import { useMemo } from "react";
 import {
   BarChart,
   Bar,
@@ -9,9 +9,10 @@ import {
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
-} from 'recharts';
-import styles from './Charts.module.scss';
-import { Transaction } from '../TransactionsTable/TransactionsTable';
+} from "recharts";
+import { TrendingUp } from "lucide-react";
+import styles from "./Charts.module.scss";
+import { Transaction } from "../TransactionsTable/TransactionsTable";
 
 interface ChartsProps {
   transactions: Transaction[];
@@ -24,38 +25,30 @@ export default function Charts({ transactions }: ChartsProps) {
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
     sixMonthsAgo.setDate(1);
 
-    // Inicializa os 6 últimos meses
     for (let i = 0; i < 6; i++) {
-      const date = new Date(sixMonthsAgo.getFullYear(), sixMonthsAgo.getMonth() + i, 1);
-      const monthName = date.toLocaleString('pt-BR', { month: 'short' }).replace('.', '');
+      const date = new Date(
+        sixMonthsAgo.getFullYear(),
+        sixMonthsAgo.getMonth() + i,
+        1
+      );
+      const monthName = date
+        .toLocaleString("pt-BR", { month: "short" })
+        .replace(".", "");
       data[monthName] = { income: 0, expense: 0 };
     }
 
     transactions.forEach((t) => {
-      let transactionDate: Date | null = null;
+      const transactionDate =
+        t.date && typeof (t.date as any).toDate === "function"
+          ? (t.date as any).toDate()
+          : new Date(t.date);
 
-      // Trata tanto Timestamp do Firestore quanto string ISO
-      if (t.date && typeof (t.date as any).toDate === 'function') {
-        transactionDate = (t.date as any).toDate();
-      } else if (typeof t.date === 'string') {
-        const parsed = new Date(t.date);
-        if (!isNaN(parsed.getTime())) transactionDate = parsed;
-      }
-
-      if (!transactionDate) return; // ignora transações inválidas
-      if (transactionDate < sixMonthsAgo) return; // ignora transações antigas
-
-      const monthName = transactionDate.toLocaleString('pt-BR', { month: 'short' }).replace('.', '');
-
-      // Garante que o mês existe no objeto, mesmo se estiver fora da lista inicial
-      if (!data[monthName]) {
-        data[monthName] = { income: 0, expense: 0 };
-      }
-
-      if (t.type === 'income') {
-        data[monthName].income += t.amount;
-      } else {
-        data[monthName].expense += t.amount;
+      const monthName = transactionDate
+        .toLocaleString("pt-BR", { month: "short" })
+        .replace(".", "");
+      if (data[monthName]) {
+        if (t.type === "income") data[monthName].income += t.amount;
+        else data[monthName].expense += Math.abs(t.amount);
       }
     });
 
@@ -68,64 +61,76 @@ export default function Charts({ transactions }: ChartsProps) {
 
   return (
     <div className={styles.container}>
-      <h3>Balanço Mensal (Últimos 6 meses)</h3>
+      <div className={styles.chartHeader}>
+        <div className={styles.iconBox}>
+          <TrendingUp size={18} />
+        </div>
+        <h3>Fluxo Mensal</h3>
+      </div>
+
       <div className={styles.chartWrapper}>
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={monthlyData}
-            margin={{ top: 5, right: 20, left: -10, bottom: 5 }}
-            barSize={30}
+            margin={{ top: 20, right: 10, left: -20, bottom: 0 }}
           >
             <defs>
-              <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--positive)" stopOpacity={0.9} />
-                <stop offset="100%" stopColor="var(--positive)" stopOpacity={0.4} />
-              </linearGradient>
-              <linearGradient id="expenseGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--negative)" stopOpacity={0.9} />
-                <stop offset="100%" stopColor="var(--negative)" stopOpacity={0.4} />
+              <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#4f46e5" stopOpacity={1} />
+                <stop offset="100%" stopColor="#4f46e5" stopOpacity={0.4} />
               </linearGradient>
             </defs>
 
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+            <CartesianGrid
+              vertical={false}
+              stroke="rgba(255,255,255,0.03)"
+              strokeDasharray="3 3"
+            />
+
             <XAxis
               dataKey="name"
-              stroke="var(--text)"
-              opacity={0.8}
-              fontSize={12}
-              tickLine={false}
               axisLine={false}
+              tickLine={false}
+              tick={{ fill: "#6b7280", fontSize: 12, fontWeight: 500 }}
+              dy={15}
             />
+
             <YAxis
-              stroke="var(--text)"
-              opacity={0.8}
-              fontSize={12}
-              tickFormatter={(value) => `R$${value / 1000}k`}
-              tickLine={false}
               axisLine={false}
+              tickLine={false}
+              tick={{ fill: "#6b7280", fontSize: 11 }}
             />
+
             <Tooltip
-              cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
-              contentStyle={{
-                background: 'var(--card)',
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--radius)',
-                color: 'var(--text)',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              cursor={{ fill: "rgba(255, 255, 255, 0.05)", radius: 10 }}
+              content={({ active, payload }) => {
+                if (active && payload && payload.length) {
+                  return (
+                    <div className={styles.customTooltip}>
+                      <span className={styles.tooltipLabel}>
+                        {payload[0].payload.name}
+                      </span>
+                      <span className={styles.tooltipValue}>
+                        R$ {payload[0].value?.toLocaleString()}
+                      </span>
+                    </div>
+                  );
+                }
+                return null;
               }}
             />
 
             <Bar
               dataKey="Receitas"
-              fill="url(#incomeGradient)"
-              radius={[4, 4, 0, 0]}
-              animationDuration={800}
+              fill="url(#barGradient)"
+              radius={[20, 20, 20, 20]} /* Formato pílula da imagem */
+              barSize={14}
             />
             <Bar
               dataKey="Despesas"
-              fill="url(#expenseGradient)"
-              radius={[4, 4, 0, 0]}
-              animationDuration={800}
+              fill="rgba(255, 255, 255, 0.1)"
+              radius={[20, 20, 20, 20]}
+              barSize={14}
             />
           </BarChart>
         </ResponsiveContainer>

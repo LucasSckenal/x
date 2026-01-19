@@ -47,6 +47,7 @@ import {
   doc,
 } from "firebase/firestore";
 import { auth, db } from "./lib/firebase";
+import Header from "./components/Header/Header";
 import { Sidebar } from "./components/Sidebar/Sidebar";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -269,7 +270,7 @@ const AddFundsModal = ({
 }: {
   isOpen: boolean;
   onClose: () => void;
-  goal: Goal | null;
+  goal: any;
   user: User | null;
 }) => {
   const [amount, setAmount] = useState("");
@@ -424,346 +425,362 @@ export default function Home() {
   const mainGoal = goals.find((g) => !g.isCompleted) || goals[0];
   const greeting = getDynamicGreeting();
 
-  // Inicial do nome para o fallback
   const userInitial = user?.displayName
     ? user.displayName[0].toUpperCase()
     : "U";
 
+  const handleOpenFunds = (goal: Goal) => {
+    setSelectedGoal(goal);
+    setFundsModalOpen(true);
+  };
+
   if (loading)
     return (
       <div className={styles.layoutContainer}>
-        <Sidebar />
-        <main
-          className={styles.mainContent}
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          <span>Carregando...</span>
-        </main>
+        <div className={styles.headerWrapper}>
+          <Header />
+        </div>
+        <div className={styles.contentBody}>
+          <Sidebar />
+          <main
+            className={styles.mainContent}
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <span>Carregando...</span>
+          </main>
+        </div>
       </div>
     );
 
   return (
     <div className={styles.layoutContainer}>
-      <Sidebar />
-      <main className={styles.mainContent}>
-        {/* HEADER COM FOTO E SAUDAÇÃO */}
-        <header className={styles.pageHeader}>
-          <div className={styles.headerLeft}>
-            {/* Lógica da Foto */}
-            <motion.div
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.5 }}
-              className={styles.avatarContainer}
-            >
-              {user?.photoURL ? (
-                <img
-                  src={user.photoURL}
-                  alt="Perfil"
-                  className={styles.profileImage}
-                />
-              ) : (
-                <div className={styles.profileFallback}>{userInitial}</div>
-              )}
-            </motion.div>
+      {/* 1. Header Fixo no Topo */}
+      <div className={styles.headerWrapper}>
+        <Header />
+      </div>
 
-            <div className={styles.headerTexts}>
-              <motion.h1
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
+      {/* 2. Conteúdo e Sidebar */}
+      <div className={styles.contentBody}>
+        <Sidebar />
+
+        <main className={styles.mainContent}>
+          <header className={styles.pageHeader}>
+            <div className={styles.headerLeft}>
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.5 }}
-                style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                className={styles.avatarContainer}
               >
-                {greeting.text},{" "}
-                {user?.displayName?.split(" ")[0] || "Visitante"}!
-                <span style={{ fontSize: "1.4rem" }}>{greeting.icon}</span>
-              </motion.h1>
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2, duration: 0.5 }}
-              >
-                {greeting.subtext}
-              </motion.p>
+                {user?.photoURL ? (
+                  <img
+                    src={user.photoURL}
+                    alt="Perfil"
+                    className={styles.profileImage}
+                  />
+                ) : (
+                  <div className={styles.profileFallback}>{userInitial}</div>
+                )}
+              </motion.div>
+
+              <div className={styles.headerTexts}>
+                <motion.h1
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.5 }}
+                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                >
+                  {greeting.text},{" "}
+                  {user?.displayName?.split(" ")[0] || "Visitante"}!
+                  <span style={{ fontSize: "1.4rem" }}>{greeting.icon}</span>
+                </motion.h1>
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.2, duration: 0.5 }}
+                >
+                  {greeting.subtext}
+                </motion.p>
+              </div>
             </div>
-          </div>
 
-          <div className={styles.dateBadge}>
-            <Calendar size={14} />
-            {new Date().toLocaleDateString("pt-BR", {
-              weekday: "long",
-              day: "numeric",
-              month: "long",
-            })}
-          </div>
-        </header>
+            <div className={styles.dateBadge}>
+              <Calendar size={14} />
+              {new Date().toLocaleDateString("pt-BR", {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+              })}
+            </div>
+          </header>
 
-        <div className={styles.bentoGrid}>
-          {/* SALDO */}
-          <div className={`${styles.card} ${styles.cardBalance}`}>
-            <div className={styles.balanceContent}>
-              <h3>Saldo Disponível</h3>
-              <div className={styles.balanceValue}>{formatMoney(saldo)}</div>
-              <div className={styles.statsRow}>
-                <div className={styles.statItem}>
-                  <div className={`${styles.statIcon} ${styles.up}`}>
-                    <ArrowUpCircle size={16} />
+          <div className={styles.bentoGrid}>
+            {/* SALDO */}
+            <div className={`${styles.card} ${styles.cardBalance}`}>
+              <div className={styles.balanceContent}>
+                <h3>Saldo Disponível</h3>
+                <div className={styles.balanceValue}>{formatMoney(saldo)}</div>
+                <div className={styles.statsRow}>
+                  <div className={styles.statItem}>
+                    <div className={`${styles.statIcon} ${styles.up}`}>
+                      <ArrowUpCircle size={16} />
+                    </div>
+                    <div className={styles.statTexts}>
+                      <span className={styles.label}>Entradas</span>
+                      <span className={styles.value}>
+                        {formatMoney(receitas)}
+                      </span>
+                    </div>
                   </div>
-                  <div className={styles.statTexts}>
-                    <span className={styles.label}>Entradas</span>
-                    <span className={styles.value}>
-                      {formatMoney(receitas)}
+                  <div className={styles.statItem}>
+                    <div className={`${styles.statIcon} ${styles.down}`}>
+                      <ArrowDownCircle size={16} />
+                    </div>
+                    <div className={styles.statTexts}>
+                      <span className={styles.label}>Saídas</span>
+                      <span className={styles.value}>
+                        {formatMoney(despesas)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* DICA */}
+            <div className={`${styles.card} ${styles.cardTip}`}>
+              <div className={styles.tipHeader}>
+                <div className={styles.tipLabel}>
+                  <Lightbulb size={18} color="#FBA94C" />{" "}
+                  <span>Dica do Dia</span>
+                </div>
+              </div>
+              <p className={styles.tipText}>{DAILY_TIPS[0].text}</p>
+            </div>
+
+            {/* METAS */}
+            <div className={`${styles.card} ${styles.cardGoals}`}>
+              <div className={styles.goalHeader}>
+                <span>Meta Principal</span>
+                <button
+                  className={styles.btnAddGoal}
+                  onClick={() => setGoalModalOpen(true)}
+                >
+                  <Plus size={14} />
+                </button>
+              </div>
+              {mainGoal ? (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "1rem",
+                  }}
+                >
+                  <div className={styles.goalInfo}>
+                    <h4>
+                      {mainGoal.emoji} {mainGoal.title}
+                    </h4>
+                  </div>
+                  <div className={styles.progressContainer}>
+                    <div
+                      className={styles.bar}
+                      style={{
+                        width: `${Math.min(
+                          (mainGoal.currentAmount / mainGoal.targetAmount) *
+                            100,
+                          100
+                        )}%`,
+                      }}
+                    ></div>
+                  </div>
+                  <div className={styles.goalFooter}>
+                    <span>
+                      {formatMoney(mainGoal.currentAmount)} /{" "}
+                      {formatMoney(mainGoal.targetAmount)}
                     </span>
+                    <button
+                      className={styles.btnInvest}
+                      onClick={() => handleOpenFunds(mainGoal)}
+                    >
+                      Investir
+                    </button>
                   </div>
                 </div>
-                <div className={styles.statItem}>
-                  <div className={`${styles.statIcon} ${styles.down}`}>
-                    <ArrowDownCircle size={16} />
+              ) : (
+                <div
+                  className={styles.emptyGoal}
+                  onClick={() => setGoalModalOpen(true)}
+                >
+                  Nova Meta +
+                </div>
+              )}
+            </div>
+
+            {/* GRÁFICO (Raio aumentado) */}
+            <div className={`${styles.card} ${styles.cardChart}`}>
+              <div className={styles.chartHeader}>
+                <h3>Gastos por Categoria</h3>
+              </div>
+              {expensesByCategory.length > 0 ? (
+                <div className={styles.chartContent}>
+                  <div className={styles.pieWrapper}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={activeData}
+                          cx="50%"
+                          cy="50%"
+                          // Raios aumentados para preencher o container maior
+                          innerRadius={70}
+                          outerRadius={90}
+                          paddingAngle={5}
+                          cornerRadius={5}
+                          dataKey="value"
+                          stroke="none"
+                        >
+                          {activeData.map((entry, index) => {
+                            const originalIndex = expensesByCategory.findIndex(
+                              (e) => e.name === entry.name
+                            );
+                            return (
+                              <Cell
+                                key={`cell-${index}`}
+                                fill={COLORS[originalIndex % COLORS.length]}
+                              />
+                            );
+                          })}
+                        </Pie>
+                        <Tooltip
+                          cursor={false}
+                          contentStyle={{
+                            background: "#121214",
+                            border: "1px solid #202024",
+                            borderRadius: "8px",
+                            color: "#fff",
+                          }}
+                          formatter={(val: number) => formatMoney(val)}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className={styles.centerLabel}>
+                      <span>Total</span>
+                      <strong>{formatMoney(visibleTotal)}</strong>
+                    </div>
                   </div>
-                  <div className={styles.statTexts}>
-                    <span className={styles.label}>Saídas</span>
-                    <span className={styles.value}>
-                      {formatMoney(despesas)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* DICA */}
-          <div className={`${styles.card} ${styles.cardTip}`}>
-            <div className={styles.tipHeader}>
-              <div className={styles.tipLabel}>
-                <Lightbulb size={18} color="#FBA94C" /> <span>Dica do Dia</span>
-              </div>
-            </div>
-            <p className={styles.tipText}>{DAILY_TIPS[0].text}</p>
-          </div>
-
-          {/* METAS */}
-          <div className={`${styles.card} ${styles.cardGoals}`}>
-            <div className={styles.goalHeader}>
-              <span>Meta Principal</span>
-              <button
-                className={styles.btnAddGoal}
-                onClick={() => setGoalModalOpen(true)}
-              >
-                <Plus size={14} />
-              </button>
-            </div>
-            {mainGoal ? (
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "1rem",
-                }}
-              >
-                <div className={styles.goalInfo}>
-                  <h4>
-                    {mainGoal.emoji} {mainGoal.title}
-                  </h4>
-                </div>
-                <div className={styles.progressContainer}>
-                  <div
-                    className={styles.bar}
-                    style={{
-                      width: `${Math.min(
-                        (mainGoal.currentAmount / mainGoal.targetAmount) * 100,
-                        100
-                      )}%`,
-                    }}
-                  ></div>
-                </div>
-                <div className={styles.goalFooter}>
-                  <span>
-                    {formatMoney(mainGoal.currentAmount)} /{" "}
-                    {formatMoney(mainGoal.targetAmount)}
-                  </span>
-                  <button
-                    className={styles.btnInvest}
-                    onClick={() => {
-                      setSelectedGoal(mainGoal);
-                      setFundsModalOpen(true);
-                    }}
-                  >
-                    Investir
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div
-                className={styles.emptyGoal}
-                onClick={() => setGoalModalOpen(true)}
-              >
-                Nova Meta +
-              </div>
-            )}
-          </div>
-
-          {/* GRÁFICO */}
-          <div className={`${styles.card} ${styles.cardChart}`}>
-            <div className={styles.chartHeader}>
-              <h3>Gastos por Categoria</h3>
-            </div>
-            {expensesByCategory.length > 0 ? (
-              <div className={styles.chartContent}>
-                <div className={styles.pieWrapper}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={activeData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
-                        paddingAngle={5}
-                        cornerRadius={5}
-                        dataKey="value"
-                        stroke="none"
-                      >
-                        {activeData.map((entry, index) => {
-                          const originalIndex = expensesByCategory.findIndex(
-                            (e) => e.name === entry.name
-                          );
-                          return (
-                            <Cell
-                              key={`cell-${index}`}
-                              fill={COLORS[originalIndex % COLORS.length]}
+                  <div className={styles.interactiveLegend}>
+                    {expensesByCategory.map((entry, index) => {
+                      const isHidden = hiddenCategories.includes(entry.name);
+                      return (
+                        <div
+                          key={index}
+                          className={`${styles.legendRow} ${
+                            isHidden ? styles.hidden : ""
+                          }`}
+                          onClick={() => toggleCategory(entry.name)}
+                        >
+                          <div className={styles.legendLeft}>
+                            <div
+                              className={styles.dot}
+                              style={{
+                                background: isHidden
+                                  ? "#333"
+                                  : COLORS[index % COLORS.length],
+                              }}
                             />
-                          );
-                        })}
-                      </Pie>
-                      <Tooltip
-                        cursor={false}
-                        contentStyle={{
-                          background: "#121214",
-                          border: "1px solid #202024",
-                          borderRadius: "8px",
-                          color: "#fff",
-                        }}
-                        formatter={(val: number) => formatMoney(val)}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className={styles.centerLabel}>
-                    <span>Total</span>
-                    <strong>{formatMoney(visibleTotal)}</strong>
+                            <span
+                              style={{
+                                marginRight: "8px",
+                                display: "flex",
+                                alignItems: "center",
+                                color: "#7C7C8A",
+                              }}
+                            >
+                              {renderCategoryIcon(entry.name, 16)}
+                            </span>
+                            <span className={styles.catName}>{entry.name}</span>
+                          </div>
+                          <div className={styles.legendRight}>
+                            <span>{formatMoney(entry.value)}</span>
+                            {isHidden ? (
+                              <EyeOff size={14} className={styles.eyeIcon} />
+                            ) : (
+                              <Eye size={14} className={styles.eyeIcon} />
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-                <div className={styles.interactiveLegend}>
-                  {expensesByCategory.map((entry, index) => {
-                    const isHidden = hiddenCategories.includes(entry.name);
-                    return (
-                      <div
-                        key={index}
-                        className={`${styles.legendRow} ${
-                          isHidden ? styles.hidden : ""
-                        }`}
-                        onClick={() => toggleCategory(entry.name)}
-                      >
-                        <div className={styles.legendLeft}>
-                          <div
-                            className={styles.dot}
-                            style={{
-                              background: isHidden
-                                ? "#333"
-                                : COLORS[index % COLORS.length],
-                            }}
-                          />
-                          <span
-                            style={{
-                              marginRight: "8px",
-                              display: "flex",
-                              alignItems: "center",
-                              color: "#7C7C8A",
-                            }}
-                          >
-                            {renderCategoryIcon(entry.name, 16)}
-                          </span>
-                          <span className={styles.catName}>{entry.name}</span>
-                        </div>
-                        <div className={styles.legendRight}>
-                          <span>{formatMoney(entry.value)}</span>
-                          {isHidden ? (
-                            <EyeOff size={14} className={styles.eyeIcon} />
-                          ) : (
-                            <Eye size={14} className={styles.eyeIcon} />
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : (
-              <div className={styles.emptyState}>Sem dados</div>
-            )}
-          </div>
-
-          {/* TRANSAÇÕES */}
-          <div className={`${styles.card} ${styles.cardTransactions}`}>
-            <div className={styles.tHeader}>
-              <h3>Histórico</h3>
-              <div className={styles.searchContainer}>
-                <Search className={styles.searchIcon} size={14} />
-                <input
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Filtrar..."
-                />
-              </div>
+              ) : (
+                <div className={styles.emptyState}>Sem dados</div>
+              )}
             </div>
-            <div className={styles.tList}>
-              {filteredTransactions.map((t) => (
-                <div key={t.id} className={styles.tItem}>
-                  <div className={styles.tIcon}>
-                    {renderCategoryIcon(t.category)}
-                  </div>
-                  <div className={styles.tContent}>
-                    <span className={styles.desc}>{t.description}</span>
-                    <span className={styles.cat}>
-                      {t.date?.seconds
-                        ? new Date(t.date.seconds * 1000).toLocaleDateString()
-                        : "-"}
+
+            {/* TRANSAÇÕES (Com Scroll Infinito) */}
+            <div className={`${styles.card} ${styles.cardTransactions}`}>
+              <div className={styles.tHeader}>
+                <h3>Histórico</h3>
+                <div className={styles.searchContainer}>
+                  <Search className={styles.searchIcon} size={14} />
+                  <input
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Filtrar..."
+                  />
+                </div>
+              </div>
+              <div className={styles.tList}>
+                {filteredTransactions.map((t) => (
+                  <div key={t.id} className={styles.tItem}>
+                    <div className={styles.tIcon}>
+                      {renderCategoryIcon(t.category)}
+                    </div>
+                    <div className={styles.tContent}>
+                      <span className={styles.desc}>{t.description}</span>
+                      <span className={styles.cat}>
+                        {t.date?.seconds
+                          ? new Date(t.date.seconds * 1000).toLocaleDateString()
+                          : "-"}
+                      </span>
+                    </div>
+                    <span
+                      className={`${styles.tAmount} ${
+                        t.type === "income" ? styles.inc : styles.exp
+                      }`}
+                    >
+                      {t.type === "income" ? "+" : "-"} {formatMoney(t.amount)}
                     </span>
                   </div>
-                  <span
-                    className={`${styles.tAmount} ${
-                      t.type === "income" ? styles.inc : styles.exp
-                    }`}
-                  >
-                    {t.type === "income" ? "+" : "-"} {formatMoney(t.amount)}
-                  </span>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      </main>
+        </main>
 
-      <AnimatePresence>
-        {isGoalModalOpen && (
-          <NewGoalModal
-            isOpen={isGoalModalOpen}
-            onClose={() => setGoalModalOpen(false)}
-            user={user}
-          />
-        )}
-        {isFundsModalOpen && (
-          <AddFundsModal
-            isOpen={isFundsModalOpen}
-            onClose={() => setFundsModalOpen(false)}
-            goal={selectedGoal}
-            user={user}
-          />
-        )}
-      </AnimatePresence>
+        <AnimatePresence>
+          {isGoalModalOpen && (
+            <NewGoalModal
+              isOpen={isGoalModalOpen}
+              onClose={() => setGoalModalOpen(false)}
+              user={user}
+            />
+          )}
+          {isFundsModalOpen && (
+            <AddFundsModal
+              isOpen={isFundsModalOpen}
+              onClose={() => setFundsModalOpen(false)}
+              goal={selectedGoal}
+              user={user}
+            />
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
