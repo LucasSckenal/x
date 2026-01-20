@@ -11,7 +11,8 @@ import {
   LogOut,
   TrendingUp,
   Receipt,
-  Target, // Ícone de Metas
+  Target,
+  Sparkles, // Ícone para a IA
 } from "lucide-react";
 
 import styles from "./Sidebar.module.scss";
@@ -39,19 +40,15 @@ export function Sidebar() {
 
   const NAV_ITEMS = [
     { name: "Dashboard", path: "/", icon: LayoutDashboard },
-    { name: "Metas", path: "/goals", icon: Target }, // Rota de Metas
+    { name: "Metas", path: "/goals", icon: Target },
     { name: "Extrato", path: "/transactions", icon: Receipt },
     { name: "Investimentos", path: "/investments", icon: TrendingUp },
+    { name: "AI Assistant", path: "/ai", icon: Sparkles, isAi: true },
     { name: "Configurações", path: "/settings", icon: Settings },
   ];
 
   return (
     <aside className={styles.sidebarContainer}>
-      {/* O seu CSS novo não tem container de logo específico. 
-         Se quiser adicionar a logo depois, crie uma div acima do <nav> 
-         e adicione a classe no CSS. Por enquanto, mantive limpo.
-      */}
-
       <nav className={styles.nav}>
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.path;
@@ -60,7 +57,8 @@ export function Sidebar() {
             <Link
               key={item.path}
               href={item.path}
-              className={`${styles.navItem} ${isActive ? styles.active : ""}`}
+              // Adiciona uma classe especial se for o item de IA
+              className={`${styles.navItem} ${isActive ? styles.active : ""} ${item.isAi ? styles.aiItem : ""}`}
               title={item.name}
             >
               <item.icon className={styles.navIcon} />

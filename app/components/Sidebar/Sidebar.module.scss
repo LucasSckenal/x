@@ -139,3 +139,29 @@ $hover-bg: #27272a;
   /* Ou altere para position: fixed; bottom: 0; width: 100%; height: 60px; etc... */
  }
 }
+
+/* ... manter o código anterior ... */
+
+.aiItem {
+  margin-bottom: 0.5rem; // Dá um leve respiro visual
+  color: #a855f7; // Cor roxa para o ícone de IA
+
+  &:hover {
+    background-color: rgba(168, 85, 247, 0.15) !important;
+    color: #c084fc;
+  }
+
+  &.active {
+    background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
+    color: #fff !important; // Ícone branco quando ativo no gradiente
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
+  }
+}
+
+/* --- ESTILO SELECIONADO (Global para os outros itens) --- */
+.navItem.active:not(.aiItem) {
+  color: $bg-sidebar;
+  background-color: var(--accent); 
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+}
+
