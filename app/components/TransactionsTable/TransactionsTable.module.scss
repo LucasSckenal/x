@@ -6,80 +6,40 @@
 .container {
   display: flex;
   flex-direction: column;
-  background: #23262B;
-  /* Fundo do Card */
+  background: #16181b;
+  /* Fundo igual aos cards */
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 24px;
-  padding: 32px;
+  padding: 24px;
   width: 100%;
   color: #fff;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
   height: 100%;
+  min-height: 500px;
 }
 
 /* ================================== */
-/* 2. HEADER E CONTROLES              */
+/* 2. HEADER E FILTROS                */
 /* ================================== */
-.header {
+.tableHeader {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 15px;
+  align-items: center;
   margin-bottom: 24px;
-
-  h3 {
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #fff;
-  }
-}
-
-/* Botão que abre o Calendário */
-.dateTriggerBtn {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 10px 18px;
-  border-radius: 12px;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-transform: capitalize;
-
-  svg {
-    opacity: 0.8;
-  }
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.3);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  }
-}
-
-/* Área Direita (Busca + Add) */
-.controls {
-  display: flex;
-  gap: 12px;
-  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .searchBox {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: #191B1F;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: #0d0e10;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 0 16px;
   border-radius: 12px;
   height: 42px;
+  flex: 1;
+  max-width: 300px;
 
   svg {
     color: #666;
@@ -90,212 +50,75 @@
     border: none;
     outline: none;
     color: #fff;
-    width: 120px;
-    font-size: 13px;
+    width: 100%;
+    font-size: 14px;
 
     &::placeholder {
       color: #555;
     }
-
-    &:focus {
-      width: 160px;
-      transition: width 0.3s;
-    }
   }
 }
 
-.addButton {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #7B61FF 0%, #6a50ee 100%);
-  border: none;
-  color: #fff;
+.filters {
+  display: flex;
+  gap: 12px;
+  position: relative;
+  /* Necessário para o Popover */
+}
+
+/* Botão Data */
+.dateTriggerBtn {
   display: flex;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: 0.3s;
-  box-shadow: 0 4px 15px rgba(123, 97, 255, 0.3);
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(123, 97, 255, 0.5);
-  }
-}
-
-/* ================================== */
-/* 3. TABELA (ESTRUTURA GRID/DIV)     */
-/* ================================== */
-.table {
-  display: flex;
-  flex-direction: column;
   gap: 8px;
-}
-
-.tableHeader {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr 0.5fr;
-  padding: 0 16px 12px;
-  color: #888;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.tableRow {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr 0.5fr;
-  padding: 16px;
-  align-items: center;
-  border-radius: 16px;
-  transition: background 0.2s;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.03);
-
-    /* Mostrar ações apenas no hover */
-    .actions {
-      opacity: 1;
-    }
-  }
-}
-
-/* Células e Conteúdo */
-.cell {
-  display: flex;
-  align-items: center;
-  font-size: 14px;
-  color: #ccc;
-
-  &.cellAmount {
-    font-weight: 600;
-  }
-}
-
-.cellDescription {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  color: #fff;
-  font-weight: 500;
-}
-
-.categoryIcon {
-  font-size: 20px;
-  width: 42px;
-  height: 42px;
   background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0 16px;
+  height: 42px;
   border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Status e Badges */
-.income {
-  color: #4ade80;
-}
-
-.expense {
-  color: #d80303;
-}
-
-.tagProj {
-  font-size: 10px;
-  background: rgba(255, 215, 0, 0.15);
-  color: #FFD700;
-  padding: 2px 8px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 215, 0, 0.3);
-  margin-left: 8px;
-  font-weight: 600;
-}
-
-.recurringBadge {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  color: #888;
-  margin-top: 4px;
-
-  svg {
-    opacity: 0.7;
-  }
-}
-
-/* Linha de Projeção (Transparente/Fantasma) */
-.projectionRow {
-  opacity: 0.6;
-  font-style: italic;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 500;
+  transition: 0.2s;
 
   &:hover {
-    opacity: 1;
+    background: rgba(255, 255, 255, 0.1);
   }
 }
 
-/* Botões de Ação na Tabela */
-.cellActions {
-  display: flex;
-  justify-content: flex-end;
+/* CALENDÁRIO FLUTUANTE (POPOVER) */
+.datePopover {
+  position: absolute;
+  top: 50px;
+  right: 0;
+  background: #191B1F;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  padding: 16px;
+  width: 280px;
+  z-index: 100;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  animation: fadeIn 0.2s ease;
 }
 
-.actionButtons {
+.popoverHeader {
   display: flex;
-  gap: 8px;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 
   button {
     background: transparent;
     border: none;
-    color: #666;
+    color: #fff;
     cursor: pointer;
-    padding: 6px;
-    border-radius: 6px;
-    transition: 0.2s;
+    padding: 4px;
 
     &:hover {
       background: rgba(255, 255, 255, 0.1);
-      color: #fff;
-    }
-  }
-}
-
-/* ================================== */
-/* 4. MODAL: SELETOR DE DATA          */
-/* ================================== */
-.datePickerContent {
-  padding: 10px 0;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.yearSelector {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 20px;
-  font-weight: 700;
-  color: #fff;
-  padding: 0 20px;
-
-  button {
-    background: rgba(255, 255, 255, 0.05);
-    border: none;
-    border-radius: 8px;
-    color: #ccc;
-    cursor: pointer;
-    padding: 8px;
-    display: flex;
-    transition: 0.2s;
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.15);
-      color: #fff;
-      transform: scale(1.1);
+      border-radius: 4px;
     }
   }
 }
@@ -303,61 +126,243 @@
 .monthsGrid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  gap: 8px;
+
+  button {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    color: #888;
+    padding: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+    }
+
+    &.activeMonth {
+      background: #7B61FF;
+      color: #fff;
+      border-color: #7B61FF;
+      font-weight: 600;
+    }
+  }
 }
 
-.monthBtn {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid transparent;
-  padding: 14px 0;
+/* Botão Nova Transação */
+.addBtn {
+  background: linear-gradient(135deg, #7B61FF 0%, #6a50ee 100%);
+  border: none;
+  height: 42px;
+  padding: 0 20px;
   border-radius: 12px;
-  color: #aaa;
+  color: #fff;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   cursor: pointer;
-  text-transform: capitalize;
-  font-weight: 500;
-  font-size: 14px;
-  transition: all 0.2s;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #fff;
-  }
-
-  &.active {
-    background: linear-gradient(135deg, #7B61FF 0%, #6a50ee 100%);
-    color: #fff;
-    font-weight: 600;
-    box-shadow: 0 4px 15px rgba(123, 97, 255, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    filter: brightness(1.1);
+    transform: translateY(-1px);
   }
 }
 
 /* ================================== */
-/* 5. MODAL: FORMULÁRIOS (ADD/EDIT)   */
+/* 3. TABELA                          */
+/* ================================== */
+.tableWrapper {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 600px;
+}
+
+.table th {
+  text-align: left;
+  padding: 12px 16px;
+  color: #8b949e;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 12px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.table td {
+  padding: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+  font-size: 14px;
+  color: #eee;
+}
+
+.table tr {
+  transition: background 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.02);
+  }
+}
+
+/* --- LINHA DE PROJEÇÃO (FANTASMA) --- */
+.projectionRow {
+  opacity: 0.6;
+  font-style: italic;
+
+  td {
+    color: #aaa;
+  }
+
+  &:hover {
+    opacity: 1;
+    background: rgba(123, 97, 255, 0.05) !important;
+  }
+}
+
+/* Células */
+.descCell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.iconBox {
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.descText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.title {
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+}
+
+.categoryTag {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #8b949e;
+}
+
+.income {
+  color: #21c25e;
+  font-weight: 600;
+}
+
+.expense {
+  color: #ff4444;
+  font-weight: 600;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.editBtn,
+.deleteBtn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #666;
+  padding: 6px;
+  border-radius: 4px;
+  transition: 0.2s;
+
+  &:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+  }
+}
+
+.deleteBtn:hover {
+  color: #ff4444;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 20px;
+  color: #888;
+
+  button {
+    background: rgba(255, 255, 255, 0.05);
+    border: none;
+    padding: 8px;
+    border-radius: 8px;
+    color: #fff;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    &:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.1);
+    }
+  }
+}
+
+.emptyState {
+  text-align: center;
+  padding: 40px;
+  color: #888;
+  font-style: italic;
+}
+
+/* ================================== */
+/* 4. FORMULÁRIO MODAL                */
 /* ================================== */
 .modalForm {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding-top: 10px;
+}
+
+.row {
+  display: flex;
+  gap: 16px;
 }
 
 .formGroup {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 8px;
 
   label {
     font-size: 12px;
-    color: #888;
-    font-weight: 500;
+    color: #8b949e;
+    font-weight: 600;
   }
 
   input {
     background: #191B1F;
     border: 1px solid rgba(255, 255, 255, 0.1);
     padding: 12px;
-    border-radius: 10px;
+    border-radius: 8px;
     color: #fff;
     outline: none;
     font-size: 14px;
@@ -369,119 +374,121 @@
   }
 }
 
-.formRow {
+.typeToggle {
   display: flex;
-  gap: 15px;
+  background: #191B1F;
+  border-radius: 8px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 
-  >div {
+  button {
     flex: 1;
-  }
-}
-
-/* Seção de Recorrência */
-.recurringSection {
-  margin-top: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  padding-top: 15px;
-}
-
-.checkboxLabel {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  color: #fff;
-
-  input[type="checkbox"] {
-    accent-color: #7B61FF;
-    width: 16px;
-    height: 16px;
-  }
-}
-
-.recurringFields {
-  margin-top: 15px;
-  padding-left: 5px;
-  border-left: 2px solid #7B61FF;
-  padding-left: 15px;
-}
-
-/* Box de Escopo (Série vs Única) */
-.scopeBox {
-  background: rgba(123, 97, 255, 0.1);
-  padding: 15px;
-  border-radius: 10px;
-  border: 1px solid rgba(123, 97, 255, 0.2);
-  margin-top: 10px;
-
-  p {
-    margin: 0 0 10px 0;
-    font-size: 12px;
-    font-weight: 700;
-    color: #AA9CFF;
-  }
-}
-
-.radios {
-  display: flex;
-  gap: 20px;
-
-  label {
+    background: transparent;
+    border: none;
+    color: #666;
+    padding: 8px;
     cursor: pointer;
-    font-size: 13px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: #fff;
+    border-radius: 6px;
+    font-weight: 600;
+    transition: 0.2s;
 
-    input {
-      accent-color: #7B61FF;
+    &.active {
+      background: #7B61FF;
+      color: #fff;
     }
   }
 }
 
-/* Ações do Modal */
-.modalActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 15px;
+/* Selects usados no form */
+.nativeSelect {
+  background: #191B1F;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  padding: 12px;
+  border-radius: 8px;
+  width: 100%;
+  outline: none;
+  cursor: pointer;
 
-  button {
-    padding: 12px 24px;
-    border-radius: 10px;
-    font-weight: 600;
-    cursor: pointer;
-    font-size: 14px;
-    border: none;
+  &:focus {
+    border-color: #7B61FF;
   }
 }
 
-.saveButton {
+/* Box de Recorrência */
+.recurringBox {
+  margin-top: 10px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+
+  input {
+    accent-color: #7B61FF;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+  }
+}
+
+.saveBtn {
   background: #7B61FF;
   color: #fff;
+  border: none;
+  padding: 14px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: 0.2s;
 
   &:hover {
     background: #6a50ee;
   }
 }
 
+/* Modal Delete Confirm */
+.modalActions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
 .cancelButton {
   background: rgba(255, 255, 255, 0.05);
   color: #fff;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.1);
-  }
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
 }
 
 .deleteConfirmButton {
   background: #ff4444;
   color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+}
 
-  &:hover {
-    background: #ff2222;
+/* Animações */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

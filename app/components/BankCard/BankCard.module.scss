@@ -1,0 +1,140 @@
+.cardContainer {
+ position: relative;
+ width: 300px;
+ height: 180px;
+ border-radius: 16px;
+ padding: 20px;
+ color: #fff;
+ display: flex;
+ flex-direction: column;
+ justify-content: space-between;
+ box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+ cursor: pointer;
+ flex-shrink: 0;
+ margin-right: 20px;
+ transition: transform 0.2s ease, box-shadow 0.2s ease;
+ border: 1px solid rgba(255, 255, 255, 0.1);
+
+ &:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+ }
+}
+
+.cardHeader {
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+}
+
+.chip {
+ width: 40px;
+ height: 28px;
+ background: linear-gradient(135deg, #e0cba8 0%, #bf9e68 100%);
+ border-radius: 6px;
+ position: relative;
+ box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+
+ &::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.15);
+ }
+}
+
+.deleteBtn {
+ background: rgba(0, 0, 0, 0.25);
+ border: none;
+ width: 36px;
+ height: 36px;
+ border-radius: 50%;
+ display: flex;
+ align-items: center;
+ justify-content: center;
+ cursor: pointer;
+
+ /* Garante que o botão esteja ACIMA de qualquer outra coisa clicável */
+ position: relative;
+ z-index: 1000;
+
+ transition: all 0.2s;
+ backdrop-filter: blur(4px);
+
+ &:hover {
+  background: #ff4444;
+  transform: scale(1.1);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+ }
+
+ &:active {
+  transform: scale(0.95);
+ }
+}
+
+.cardBody {
+ margin-top: 10px;
+
+ .bankName {
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  opacity: 0.9;
+  margin-bottom: 8px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+ }
+
+ .cardNumber {
+  font-family: monospace;
+  font-size: 20px;
+  letter-spacing: 2px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+ }
+}
+
+.cardFooter {
+ display: flex;
+ justify-content: space-between;
+ align-items: flex-end;
+}
+
+.leftInfo {
+ display: flex;
+ flex-direction: column;
+ gap: 2px;
+
+ .label {
+  font-size: 10px;
+  opacity: 0.7;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+ }
+
+ .exp {
+  font-size: 14px;
+  font-weight: 500;
+ }
+}
+
+.rightInfo {
+ display: flex;
+ flex-direction: column;
+ align-items: flex-end;
+ gap: 2px;
+
+ .invoiceLabel {
+  font-size: 10px;
+  opacity: 0.8;
+  text-transform: uppercase;
+ }
+
+ .total {
+  font-size: 19px;
+  font-weight: 700;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+ }
+}
