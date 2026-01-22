@@ -16,6 +16,10 @@ import {
   Lightbulb,
   Eye,
   EyeOff,
+  Mic,
+  MicOff,
+  CheckCircle2,
+  Sparkles,
   // Ícones Categorias
   Pizza,
   CarFront,
@@ -34,6 +38,8 @@ import {
   Globe,
   Droplet,
   Flame,
+  BrainCircuit,
+  MessageSquare,
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { onAuthStateChanged, User } from "firebase/auth";
@@ -46,11 +52,13 @@ import {
   updateDoc,
   doc,
   getDoc,
+  Timestamp,
 } from "firebase/firestore";
 import { auth, db } from "./lib/firebase";
 import Header from "./components/Header/Header";
 import { Sidebar } from "./components/Sidebar/Sidebar";
 import { motion, AnimatePresence } from "framer-motion";
+import toast from "react-hot-toast";
 
 import styles from "./HomePage.module.scss";
 
@@ -112,24 +120,6 @@ const COLORS = [
   "#FF669D",
   "#0088FE",
   "#6AD2FF",
-];
-
-const DAILY_TIPS = [
-  {
-    id: 1,
-    text: "Separe 10% do que receber assim que cair na conta.",
-    category: "Investimento",
-  },
-  {
-    id: 2,
-    text: "Revise seus gastos semanalmente para identificar gargalos.",
-    category: "Economia",
-  },
-  {
-    id: 3,
-    text: "Metas claras aceleram a conquista de objetivos.",
-    category: "Metas",
-  },
 ];
 
 const EMOJI_OPTIONS = [
@@ -363,6 +353,20 @@ export default function Home() {
   const [isFundsModalOpen, setFundsModalOpen] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
 
+  // Estados para funcionalidade de voz
+  const [isListening, setIsListening] = useState(false);
+  const [speechResult, setSpeechResult] = useState("");
+  const [isProcessingVoice, setIsProcessingVoice] = useState(false);
+  const [voiceConfirmation, setVoiceConfirmation] = useState<{
+    show: boolean;
+    transaction: any;
+  }>({
+    show: false,
+    transaction: null,
+  });
+
+  const recognitionRef = React.useRef<any>(null);
+
   // Buscar dados do usuário do Firestore
   const fetchUserData = async (uid: string) => {
     try {
@@ -402,6 +406,44 @@ export default function Home() {
       setUserPhotoUrl(authUser?.photoURL || null);
     }
   };
+
+  // Inicializar reconhecimento de voz
+  useEffect(() => {
+    if (typeof window !== "undefined" && "webkitSpeechRecognition" in window) {
+      const SpeechRecognition = window.webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+      recognitionRef.current.lang = "pt-BR";
+
+      recognitionRef.current.onstart = () => {
+        setIsListening(true);
+        toast.success("🎤 Ouvindo... Fale agora!");
+      };
+
+      recognitionRef.current.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setSpeechResult(transcript);
+        handleProcessVoiceTransaction(transcript);
+      };
+
+      recognitionRef.current.onerror = (event: any) => {
+        console.error("Erro no reconhecimento de voz:", event.error);
+        setIsListening(false);
+        if (event.error === "not-allowed") {
+          toast.error("Permissão de microfone negada");
+        } else {
+          toast.error("Erro ao reconhecer voz");
+        }
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+      };
+    } else {
+      console.warn("Reconhecimento de voz não suportado neste navegador");
+    }
+  }, []);
 
   // Escutar mudanças no perfil do usuário
   useEffect(() => {
@@ -455,6 +497,84 @@ export default function Home() {
     });
     return () => unsubscribeAuth();
   }, []);
+
+  const toggleVoiceRecognition = () => {
+    if (!recognitionRef.current) {
+      toast.error("Reconhecimento de voz não suportado");
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current.stop();
+    } else {
+      setSpeechResult("");
+      recognitionRef.current.start();
+    }
+  };
+
+  const handleProcessVoiceTransaction = async (text: string) => {
+    if (!text.trim() || !user) return;
+
+    setIsProcessingVoice(true);
+    try {
+      // Extrair transação usando IA
+      const res = await fetch("/api/route", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "extract_transaction",
+          payload: { text },
+        }),
+      });
+
+      if (!res.ok) throw new Error("Erro ao processar voz");
+
+      const data = await res.json();
+
+      if (data.transaction) {
+        // Mostrar confirmação
+        setVoiceConfirmation({
+          show: true,
+          transaction: data.transaction,
+        });
+      } else {
+        toast.error("Não entendi a transação. Tente novamente!");
+      }
+    } catch (err) {
+      console.error("Erro ao processar voz:", err);
+      toast.error("Erro ao processar. Tente novamente!");
+    } finally {
+      setIsProcessingVoice(false);
+    }
+  };
+
+  const handleConfirmVoiceTransaction = async () => {
+    if (!user || !voiceConfirmation.transaction) return;
+
+    try {
+      await addDoc(collection(db, `users/${user.uid}/transactions`), {
+        ...voiceConfirmation.transaction,
+        date: Timestamp.now(),
+        createdAt: Timestamp.now(),
+        addedByVoice: true,
+        voiceText: speechResult,
+      });
+
+      toast.success("✅ Transação salva por voz!");
+      setVoiceConfirmation({ show: false, transaction: null });
+      setSpeechResult("");
+    } catch (err) {
+      console.error("Erro ao salvar transação de voz:", err);
+      toast.error("Erro ao salvar transação");
+    }
+  };
+
+  const handleCancelVoiceTransaction = () => {
+    setVoiceConfirmation({ show: false, transaction: null });
+    setSpeechResult("");
+  };
 
   const expensesByCategory = useMemo(() => {
     const expenses = transactions.filter((t) => t.type === "expense");
@@ -648,15 +768,57 @@ export default function Home() {
               </div>
             </div>
 
-            {/* DICA */}
-            <div className={`${styles.card} ${styles.cardTip}`}>
-              <div className={styles.tipHeader}>
-                <div className={styles.tipLabel}>
-                  <Lightbulb size={18} color="#FBA94C" />{" "}
-                  <span>Dica do Dia</span>
+            {/* VOZ */}
+            <div className={`${styles.card} ${styles.cardVoice}`}>
+              <div className={styles.voiceHeader}>
+                <div className={styles.voiceLabel}>
+                  <Mic size={18} color="#8257e5" />{" "}
+                  <span>Adicionar por Voz</span>
+                </div>
+                {speechResult && (
+                  <span className={styles.voiceStatus}>
+                    <BrainCircuit size={14} />
+                    Processando IA
+                  </span>
+                )}
+              </div>
+
+              <div className={styles.voiceContent}>
+                <button
+                  className={`${styles.voiceButton} ${
+                    isListening ? styles.listening : ""
+                  } ${isProcessingVoice ? styles.processing : ""}`}
+                  onClick={toggleVoiceRecognition}
+                  disabled={isProcessingVoice}
+                  aria-label={
+                    isListening ? "Parar gravação" : "Iniciar gravação de voz"
+                  }
+                >
+                  {isProcessingVoice ? (
+                    <Sparkles className={styles.spin} size={20} />
+                  ) : isListening ? (
+                    <MicOff size={20} />
+                  ) : (
+                    <Mic size={20} />
+                  )}
+                </button>
+
+                <p className={styles.voiceHint}>
+                  {isListening
+                    ? "Fale agora..."
+                    : speechResult
+                      ? `"${speechResult.substring(0, 60)}..."`
+                      : "Clique e fale uma transação"}
+                </p>
+
+                <div className={styles.voiceExamples}>
+                  <span>Exemplos:</span>
+                  <div className={styles.exampleChips}>
+                    <span>"Gastei R$ 50 no mercado"</span>
+                    <span>"Recebi R$ 1.200 salário"</span>
+                  </div>
                 </div>
               </div>
-              <p className={styles.tipText}>{DAILY_TIPS[0].text}</p>
             </div>
 
             {/* METAS */}
@@ -859,6 +1021,86 @@ export default function Home() {
             </div>
           </div>
         </main>
+
+        {/* Modal de Confirmação de Voz */}
+        <AnimatePresence>
+          {voiceConfirmation.show && voiceConfirmation.transaction && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className={styles.voiceModalOverlay}
+            >
+              <div className={styles.voiceModal}>
+                <div className={styles.voiceModalHeader}>
+                  <h3>
+                    <Sparkles size={20} />
+                    Confirmação de Voz
+                  </h3>
+                  <button onClick={handleCancelVoiceTransaction}>
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <div className={styles.voiceModalContent}>
+                  <div className={styles.voiceTransaction}>
+                    <div className={styles.voiceTransactionItem}>
+                      <span>Descrição</span>
+                      <strong>
+                        {voiceConfirmation.transaction.description}
+                      </strong>
+                    </div>
+                    <div className={styles.voiceTransactionItem}>
+                      <span>Categoria</span>
+                      <strong>{voiceConfirmation.transaction.category}</strong>
+                    </div>
+                    <div className={styles.voiceTransactionItem}>
+                      <span>Tipo</span>
+                      <strong
+                        style={{
+                          color:
+                            voiceConfirmation.transaction.type === "income"
+                              ? "#00B37E"
+                              : "#F75A68",
+                        }}
+                      >
+                        {voiceConfirmation.transaction.type === "income"
+                          ? "Entrada"
+                          : "Saída"}
+                      </strong>
+                    </div>
+                    <div className={styles.voiceTransactionItem}>
+                      <span>Valor</span>
+                      <strong style={{ color: "#8257e5" }}>
+                        R${" "}
+                        {Number(voiceConfirmation.transaction.amount).toFixed(
+                          2,
+                        )}
+                      </strong>
+                    </div>
+                  </div>
+
+                  <div className={styles.voiceModalActions}>
+                    <button
+                      className={styles.voiceCancel}
+                      onClick={handleCancelVoiceTransaction}
+                    >
+                      <X size={16} />
+                      Cancelar
+                    </button>
+                    <button
+                      className={styles.voiceConfirm}
+                      onClick={handleConfirmVoiceTransaction}
+                    >
+                      <CheckCircle2 size={16} />
+                      Confirmar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <AnimatePresence>
           {isGoalModalOpen && (

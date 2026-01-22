@@ -53,7 +53,7 @@ $danger: #F75A68;
   max-width: 1600px;
   width: 100%;
   margin: 0 auto;
- 
+
   /* Sidebar Fixa */
 
   @media (max-width: 1024px) {
@@ -154,12 +154,12 @@ $danger: #F75A68;
   grid-template-columns: repeat(4, 1fr);
   grid-template-rows: auto auto;
   grid-template-areas:
-    "balance balance tip goals"
+    "balance balance voice goals"
     "chart chart chart trans";
 
   @media (max-width: 1400px) {
     grid-template-areas:
-      "balance balance tip goals"
+      "balance balance voice goals"
       "chart chart chart chart"
       "trans trans trans trans";
   }
@@ -168,7 +168,7 @@ $danger: #F75A68;
     grid-template-columns: repeat(2, 1fr);
     grid-template-areas:
       "balance balance"
-      "tip goals"
+      "voice goals"
       "chart chart"
       "trans trans";
   }
@@ -281,32 +281,285 @@ $danger: #F75A68;
   }
 }
 
-.cardTip {
-  grid-area: tip;
+/* --- CARD DE VOZ --- */
+.cardVoice {
+  grid-area: voice;
   justify-content: flex-start;
   gap: 1rem;
+  border: 1px solid rgba(130, 87, 229, 0.2);
+  background: linear-gradient(135deg, rgba(130, 87, 229, 0.1) 0%, rgba(23, 23, 26, 0.6) 100%);
 }
 
-.tipHeader {
+.voiceHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 0.5rem;
 }
 
-.tipLabel {
+.voiceLabel {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #FBA94C;
+  color: $accent;
   font-size: 0.85rem;
   font-weight: 600;
 }
 
-.tipText {
-  font-size: 0.95rem;
-  line-height: 1.5;
+.voiceStatus {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.7rem;
+  color: #FBA94C;
+  background: rgba(251, 169, 76, 0.1);
+  padding: 0.2rem 0.5rem;
+  border-radius: 10px;
+}
+
+.voiceContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+  justify-content: center;
+}
+
+.voiceButton {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: $accent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: white;
+  box-shadow: 0 8px 32px rgba(130, 87, 229, 0.3);
+
+  &:hover:not(:disabled) {
+    transform: scale(1.05);
+    box-shadow: 0 12px 40px rgba(130, 87, 229, 0.4);
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.95);
+  }
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
+  &.listening {
+    background: #F75A68;
+    animation: pulse 2s infinite;
+    box-shadow: 0 8px 32px rgba(247, 90, 104, 0.3);
+  }
+
+  &.processing {
+    background: linear-gradient(135deg, $accent, #FBA94C);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(247, 90, 104, 0.7);
+  }
+
+  70% {
+    box-shadow: 0 0 0 10px rgba(247, 90, 104, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(247, 90, 104, 0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+.voiceHint {
+  font-size: 0.85rem;
   color: $text-secondary;
+  text-align: center;
   margin: 0;
+  min-height: 20px;
+  line-height: 1.4;
+}
+
+.voiceExamples {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+
+  span {
+    font-size: 0.7rem;
+    color: $text-secondary;
+  }
+}
+
+.exampleChips {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+
+  span {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0.3rem 0.6rem;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    color: #a78bfa;
+    font-style: italic;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* Modal de Confirmação de Voz */
+.voiceModalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.voiceModal {
+  @include glass-effect;
+  background: #121214;
+  width: 100%;
+  max-width: 400px;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(130, 87, 229, 0.3);
+}
+
+.voiceModalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+
+  h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  button {
+    background: none;
+    border: none;
+    color: $text-secondary;
+    cursor: pointer;
+    transition: color 0.2s;
+
+    &:hover {
+      color: #fff;
+    }
+  }
+}
+
+.voiceModalContent {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.voiceTransaction {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1rem;
+  border-radius: 12px;
+}
+
+.voiceTransactionItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+  &:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  span {
+    color: $text-secondary;
+    font-size: 0.85rem;
+  }
+
+  strong {
+    font-weight: 600;
+    color: #fff;
+    font-size: 0.95rem;
+  }
+}
+
+.voiceModalActions {
+  display: flex;
+  gap: 1rem;
+
+  button {
+    flex: 1;
+    padding: 0.8rem;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .voiceCancel {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+
+    &:hover {
+      background: rgba(239, 68, 68, 0.2);
+    }
+  }
+
+  .voiceConfirm {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+
+    &:hover {
+      background: rgba(16, 185, 129, 0.2);
+    }
+  }
 }
 
 .cardGoals {
@@ -409,7 +662,7 @@ $danger: #F75A68;
   max-height: 420px;
   display: flex;
   flex-direction: column;
-  
+
 }
 
 .chartHeader {
@@ -762,4 +1015,3 @@ $danger: #F75A68;
     cursor: not-allowed;
   }
 }
-

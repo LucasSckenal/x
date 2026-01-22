@@ -17,10 +17,6 @@ const nextConfig = {
       },
     ],
   },
-  // Configurações para PWA
-  experimental: {
-    appDir: true,
-  },
 };
 
 // Exporta a configuração com PWA

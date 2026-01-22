@@ -372,6 +372,7 @@ export default function Dashboard() {
     <div className={styles.pageWrap}>
       <Sidebar />
       <main className={styles.mainContent}>
+        {/*TIRAR ELE DAQUI QUEBRA TUDO POR ALGUM MOTIVO*/}
         <Header user={user} />
         <div className={styles.container}>
           <div className={styles.dashboardGrid}>

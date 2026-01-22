@@ -64,6 +64,9 @@ export default function TransactionsTable({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 7;
 
+  //IA
+  const [isAiLoading, setIsAiLoading] = useState(false);
+
   // Filtros de Data
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -147,6 +150,36 @@ export default function TransactionsTable({
     }
     setIsModalOpen(true);
   };
+
+  const localCategorizationRules = [
+    { keywords: ["uber", "99", "taxi", "posto", "combustivel", "gasolina", "diesel"], category: "Transporte" },
+    {
+      keywords: ["ifood", "pizza", "lanche", "restaurante", "burger"],
+      category: "Alimentação",
+    },
+    {
+      keywords: ["netflix", "spotify", "prime", "hbo"],
+      category: "Entretenimento",
+    },
+    { keywords: ["farmacia", "remedio", "hospital"], category: "Saúde" },
+    { keywords: ["curso", "faculdade", "udemy"], category: "Educação" },
+    { keywords: ["salario", "pagamento", "provento"], category: "Salário" },
+    {
+      keywords: ["nubank", "itau", "inter", "bradesco", "picpay", "santander", "c6", "caixa", "xp"],
+      category: "Cartão de Crédito",
+    },
+    { keywords: ["bitcoin", "acao", "investimento"], category: "Investimento" },
+    { keywords: ["mercado", "supermercado", "carrefour", "extra"], category: "Compras" },
+    { keywords: ["presentes"], category: "Presentes" },
+  ];
+
+  const tryLocalCategorize = (description: string) => {
+    const text = description.toLowerCase();
+    return localCategorizationRules.find((rule) =>
+      rule.keywords.some((word) => text.includes(word)),
+    )?.category;
+  };
+
 
   const handleSave = () => {
     if (!formData.description || !formData.amount) return;
@@ -273,6 +306,53 @@ export default function TransactionsTable({
     "Novembro",
     "Dezembro",
   ];
+
+  const handleAutoCategorize = async () => {
+    if (!formData.description || formData.description.length < 3) return;
+    if (formData.category !== "Outro") return;
+
+    // 🧠 1️⃣ TENTA LOCAL (GRÁTIS)
+    const localCategory = tryLocalCategorize(formData.description);
+    if (localCategory) {
+      const cat = transactionCategories.find((c) => c.value === localCategory);
+
+      setFormData((prev) => ({
+        ...prev,
+        category: localCategory,
+        categoryIcon: cat?.icon || "📝",
+      }));
+      return;
+    }
+
+    // 🤖 2️⃣ FALLBACK IA
+    setIsAiLoading(true);
+    try {
+      const response = await fetch("/api/categorize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description: formData.description }),
+      });
+
+      const data = await response.json();
+
+      if (data.category) {
+        const cat = transactionCategories.find(
+          (c) => c.value === data.category,
+        );
+
+        setFormData((prev) => ({
+          ...prev,
+          category: data.category,
+          categoryIcon: cat?.icon || "📝",
+        }));
+      }
+    } catch (error) {
+      console.error("Erro ao categorizar:", error);
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
 
   return (
     <div className={styles.container}>
@@ -495,8 +575,22 @@ export default function TransactionsTable({
               onChange={(e) =>
                 setFormData({ ...formData, description: e.target.value })
               }
-              placeholder="Ex: Netflix"
+              onBlur={handleAutoCategorize} // <--- A MÁGICA ACONTECE AQUI
+              placeholder="Ex: Uber, Netflix, Zaffari..."
             />
+            {isAiLoading && (
+              <span
+                style={{
+                  position: "absolute",
+                  right: 10,
+                  top: 10,
+                  fontSize: "12px",
+                  color: "#7B61FF",
+                }}
+              >
+                ✨ IA a pensar...
+              </span>
+            )}
           </div>
           <div className={styles.row}>
             <div className={styles.formGroup}>
